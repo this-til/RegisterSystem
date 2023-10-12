@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace ReflexAssetsManage; 
+namespace RegisterSystem; 
 
 /// <summary>
 /// 自动赋值
