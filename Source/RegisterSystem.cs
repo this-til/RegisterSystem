@@ -10,28 +10,28 @@ public class RegisterSystem {
     protected readonly HashSet<Assembly> allManagedAssembly = new HashSet<Assembly>();
 
     /// <summary>
-    ///  根据RegisterManage的类型映射
+    /// 根据<see cref="RegisterManage"/>类型的映射表
     /// </summary>
     protected readonly Dictionary<Type, RegisterManage> classRegisterManageMap = new Dictionary<Type, RegisterManage>();
 
     /// <summary>
-    /// 根据RegisterManage的管理类型映射
+    /// 根据<see cref="RegisterBasics"/>类型的映射表
     /// </summary>
     protected readonly Dictionary<Type, RegisterManage> registerManageMap = new Dictionary<Type, RegisterManage>();
 
     /// <summary>
-    /// 类管理器的名称映射
+    /// 根据<see cref="RegisterManage.name"/>的映射表
     /// 这里不使用全名称只是因为类管理器的全名称只是给人看的
     /// </summary>
     protected readonly Dictionary<String, RegisterManage> nameRegisterManageMap = new Dictionary<string, RegisterManage>();
 
     /// <summary>
-    /// 自动注册的类型
+    /// 标记有<see cref="VoluntarilyRegisterAttribute"/>属性的注册项类型的映射表
     /// </summary>
     protected readonly Dictionary<Type, RegisterBasics> allVoluntarilyRegisterAssetMap = new Dictionary<Type, RegisterBasics>();
 
     /// <summary>
-    /// 注册项的全限定名称的映射表
+    /// 根据<see cref="RegisterBasics.completeName"/>的映射表
     /// </summary>
     protected readonly Dictionary<string, RegisterBasics> completeNameRegisterBasicsMap = new Dictionary<string, RegisterBasics>();
 
