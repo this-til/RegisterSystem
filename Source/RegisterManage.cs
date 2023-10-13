@@ -1,4 +1,6 @@
-﻿namespace RegisterSystem;
+﻿using System.Reflection;
+
+namespace RegisterSystem;
 
 /// <summary>
 /// 类型管理
@@ -47,7 +49,7 @@ public abstract class RegisterManage {
     /// <summary>
     /// 注册操作
     /// </summary>
-    public abstract void put(RegisterBasics register, bool fromSon);
+    internal abstract void put(RegisterBasics register, bool fromSon);
 
     /// <summary>
     /// 通过名称获取注册项
@@ -64,7 +66,7 @@ public abstract class RegisterManage {
     /// 高于RegisterBasics自己的优先级
     /// </summary>
     /// <returns></returns>
-    public virtual int getVoluntarilyRegisterTime() => 0;
+    public virtual int getPriority() => 0;
 
     public RegisterSystem getRegisterSystem() => registerSystem;
 
@@ -73,8 +75,12 @@ public abstract class RegisterManage {
     /// <summary>
     /// 获取默认的注册选项
     /// </summary>
-    public virtual IEnumerable<RegisterBasics> getDefaultRegisterItem() {
-        
+    internal virtual IEnumerable<RegisterBasics> getDefaultRegisterItem() {
+        yield break;
+    }
+
+    public override string ToString() {
+        return $"{nameof(completeName)}: {completeName}, {nameof(name)}: {name}, type:{getRegisterType()}";
     }
 }
 
@@ -83,7 +89,7 @@ public class RegisterManage<T> : RegisterManage where T : RegisterBasics {
 
     public override Type getRegisterType() => typeof(T);
 
-    public override void put(RegisterBasics register, bool fromSon) {
+    internal override void put(RegisterBasics register, bool fromSon) {
         basicsRegisterManage?.put(register, true);
         registerMap.Add(register.getName(), (T)register);
     }

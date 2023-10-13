@@ -14,5 +14,8 @@ public class VoluntarilyRegisterAttribute : System.Attribute {
     /// </summary>
     public int priority;
     
+    /// <summary>
+    /// 自定义的名称
+    /// </summary>
     public string customName;
 }

@@ -31,6 +31,31 @@ public class RegisterBasics {
     /// </summary>
     protected int priority;
 
+    /// <summary>
+    /// 最早的初始化方法
+    /// </summary>
+    internal virtual void awakeInit() {
+    }
+
+    /// <summary>
+    /// 初始化方法
+    /// </summary>
+    internal virtual void init() {
+    }
+
+    /// <summary>
+    /// 初始化结束后统一调用
+    /// </summary>
+    internal virtual void initBack() {
+    }
+
+    /// <summary>
+    /// 获取附加的注册项目
+    /// </summary>
+    internal IEnumerable<KeyValuePair<RegisterBasics, string>> getAdditionalRegister() {
+        yield break;
+    }
+
     public string getCompleteName() => completeName;
 
     public string getName() => name;

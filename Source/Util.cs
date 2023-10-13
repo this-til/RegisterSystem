@@ -14,6 +14,13 @@ public class Util {
         return true;
     }
 
+    public static bool isEffective(FieldInfo fieldInfo) {
+        if (fieldInfo.GetCustomAttribute<ObsoleteAttribute>() is not null) {
+            return false;
+        }
+        return true;
+    }
+
     public static String ofPath(Type type) {
         StringBuilder stringBuilder = new StringBuilder();
         String className = type.Name;
