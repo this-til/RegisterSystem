@@ -7,7 +7,7 @@ public class FieldRegisterAttribute : Attribute {
     /// <summary>
     /// 自定义的名称
     /// </summary>
-    public string customName;
+    public string customName = String.Empty;
 
     /// <summary>
     /// 注册项的类型
