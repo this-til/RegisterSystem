@@ -47,6 +47,7 @@ public class RegisterSystem {
     protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName") ?? throw new Exception();
     protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem") ?? throw new Exception();
     protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority") ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit") ?? throw new Exception();
 
     /// <summary>
     /// 一个标志，
@@ -59,7 +60,9 @@ public class RegisterSystem {
     /// <summary>
     /// 在类型管理被创建完成后的一个回调事件
     /// </summary>
-    protected event Action<RegisterManage> registerManageBuildEvent;
+    protected event Action<RegisterManage> registerManageAwakeInitEvent;
+
+    protected event Action<RegisterManage> registerManageInitEvent;
 
     /// <summary>
     /// 类型管理注册完所有的注册项后
@@ -80,13 +83,16 @@ public class RegisterSystem {
     public bool isInit() => _isInit;
 
     public RegisterSystem() {
-        initAddRegisterManageBuildEvent(r => log.Info($"完成构建类型管理器{r}"));
-        initAddRegisterManageBuildEvent(r => nameRegisterManageMap.Add(r.getName(), r));
+        initAddRegisterManageAwakeInitEvent(r => r.awakeInit());
+        initAddRegisterManageAwakeInitEvent(r => log.Info($"完成构建类型管理器{r}"));
+        initAddRegisterManageAwakeInitEvent(r => nameRegisterManageMap.Add(r.getName(), r));
+        initAddRegisterManageInitEvent(r => r.init());
         initAddRegisterManagePutEndEvent(voluntarilyAssignment);
         initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
         initAddRegisterBasicsInitEvent(r => r.init());
         initAddRegisterBasicsPutEvent(r => log.Info($"已经将{r}注册进系统"));
         initAddRegisterBasicsPutEvent(voluntarilyAssignment);
+        initAddRegisterBasicsInitBackEvent(r => registerBasics_isInit.SetValue(r, true));
         initAddRegisterBasicsInitBackEvent(r => r.initBack());
     }
 
@@ -101,9 +107,14 @@ public class RegisterSystem {
         this.log = _log;
     }
 
-    public void initAddRegisterManageBuildEvent(Action<RegisterManage> action) {
+    public void initAddRegisterManageAwakeInitEvent(Action<RegisterManage> action) {
         initTest();
-        registerManageBuildEvent += action;
+        registerManageAwakeInitEvent += action;
+    }
+
+    public void initAddRegisterManageInitEvent(Action<RegisterManage> action) {
+        initTest();
+        registerManageInitEvent += action;
     }
 
     public void initAddRegisterManagePutEndEvent(Action<RegisterManage> action) {
@@ -213,7 +224,7 @@ public class RegisterSystem {
 
         //回调
         foreach (var registerManage in classRegisterManageMap.Values) {
-            registerManageBuildEvent(registerManage);
+            registerManageAwakeInitEvent(registerManage);
         }
 
         List<RegisterBasics> registerBasicsList = new List<RegisterBasics>();
@@ -276,6 +287,10 @@ public class RegisterSystem {
         //从类型管理器中获取默认注册项
         foreach (var registerManage in classRegisterManageMap.Values) {
             registerBasicsList.AddRange(registerManage.getDefaultRegisterItem());
+        }
+
+        foreach (var registerManage in classRegisterManageMap.Values) {
+            registerManageInitEvent(registerManage);
         }
 
         unifyRegister(registerBasicsList);
@@ -447,11 +462,11 @@ public class RegisterSystem {
             if (voluntarilyAssignmentAttribute is null) {
                 continue;
             }
-            if (typeof(RegisterBasics).IsAssignableFrom(obj.GetType())) {
+            if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
                 fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterBasicsOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
                 continue;
             }
-            if (typeof(RegisterManage).IsAssignableFrom(obj.GetType())) {
+            if (typeof(RegisterManage).IsAssignableFrom(fieldInfo.FieldType)) {
                 fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterManageOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
             }
         }

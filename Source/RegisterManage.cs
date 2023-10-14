@@ -7,6 +7,8 @@ namespace RegisterSystem;
 /// 这是一个泛型擦除的
 /// </summary>
 public abstract class RegisterManage {
+    protected Dictionary<string, RegisterBasics> registerMap = new Dictionary<string, RegisterBasics>();
+
     /// <summary>
     /// 对应的注册管理系统
     /// 由<see cref="RegisterSystem"/>统进行反射赋值
@@ -31,6 +33,21 @@ public abstract class RegisterManage {
     /// 由管理系统进行反射赋值
     /// </summary>
     protected RegisterManage? basicsRegisterManage;
+    
+
+    /// <summary>
+    /// 最早的初始化方法
+    /// 在初始化时并没有填充注册字段
+    /// </summary>
+    public virtual void awakeInit() {
+    }
+
+    /// <summary>
+    /// 初始化
+    /// 在填充注册项后调用
+    /// </summary>
+    public virtual void init() {
+    }
 
     public string getCompleteName() => completeName;
 
@@ -49,17 +66,25 @@ public abstract class RegisterManage {
     /// <summary>
     /// 注册操作
     /// </summary>
-    internal abstract void put(RegisterBasics register, bool fromSon);
+    public virtual void put(RegisterBasics register, bool fromSon) {
+        basicsRegisterManage?.put(register, true);
+        registerMap.Add(register.getName(), register);
+    }
 
     /// <summary>
     /// 通过名称获取注册项
     /// </summary>
-    public abstract RegisterBasics? get_erase(string key);
+    public virtual RegisterBasics? get_erase(string key) {
+        if (registerMap.ContainsKey(key)) {
+            return registerMap[key];
+        }
+        return null;
+    }
 
     /// <summary>
     /// 输出所有的注册项
     /// </summary>
-    public abstract IEnumerable<KeyValuePair<string, RegisterBasics>> forAll_erase();
+    public virtual IEnumerable<KeyValuePair<string, RegisterBasics>> forAll_erase() => registerMap;
 
     /// <summary>
     /// 获取初始化的优先级
@@ -75,7 +100,7 @@ public abstract class RegisterManage {
     /// <summary>
     /// 获取默认的注册选项
     /// </summary>
-    internal virtual IEnumerable<RegisterBasics> getDefaultRegisterItem() {
+    public virtual IEnumerable<RegisterBasics> getDefaultRegisterItem() {
         yield break;
     }
 
@@ -85,35 +110,15 @@ public abstract class RegisterManage {
 }
 
 public class RegisterManage<T> : RegisterManage where T : RegisterBasics {
-    protected Dictionary<string, T> registerMap = new Dictionary<string, T>();
-
     public override Type getRegisterType() => typeof(T);
-
-    internal override void put(RegisterBasics register, bool fromSon) {
-        basicsRegisterManage?.put(register, true);
-        registerMap.Add(register.getName(), (T)register);
-    }
-
-    public override RegisterBasics? get_erase(string key) {
-        if (registerMap.ContainsKey(key)) {
-            return registerMap[key];
-        }
-        return null;
-    }
 
     public T? get(string key) {
         return get_erase(key) as T;
     }
 
     public virtual IEnumerable<KeyValuePair<string, T>> forAll() {
-        foreach (var keyValuePair in registerMap) {
-            yield return keyValuePair;
-        }
-    }
-
-    public override IEnumerable<KeyValuePair<string, RegisterBasics>> forAll_erase() {
-        foreach (var keyValuePair in registerMap) {
-            yield return new KeyValuePair<string, RegisterBasics>(keyValuePair.Key, keyValuePair.Value);
+        foreach (var keyValuePair in forAll_erase()) {
+            yield return new KeyValuePair<string, T>(keyValuePair.Key, keyValuePair.Value as T ?? throw new Exception());
         }
     }
 }

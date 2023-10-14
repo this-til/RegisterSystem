@@ -3,6 +3,7 @@
 /// <summary>
 /// 给RegisterManage提供默认注册项的一些元数据
 /// </summary>
+[AttributeUsage(AttributeTargets.Field)]
 public class FieldRegisterAttribute : Attribute {
     /// <summary>
     /// 自定义的名称
