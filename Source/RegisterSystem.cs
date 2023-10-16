@@ -55,7 +55,7 @@ public class RegisterSystem {
     /// </summary>
     protected bool _isInit;
 
-    protected ILog log = LogManager.GetLogger(typeof(RegisterSystem));
+    protected ILogOut? log;
 
     /// <summary>
     /// 在类型管理被创建完成后的一个回调事件
@@ -84,13 +84,13 @@ public class RegisterSystem {
 
     public RegisterSystem() {
         initAddRegisterManageAwakeInitEvent(r => r.awakeInit());
-        initAddRegisterManageAwakeInitEvent(r => log.Info($"完成构建类型管理器{r}"));
+        initAddRegisterManageAwakeInitEvent(r => getLog()?.Info($"完成构建类型管理器{r}"));
         initAddRegisterManageAwakeInitEvent(r => nameRegisterManageMap.Add(r.getName(), r));
         initAddRegisterManageInitEvent(r => r.init());
         initAddRegisterManagePutEndEvent(voluntarilyAssignment);
         initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
         initAddRegisterBasicsInitEvent(r => r.init());
-        initAddRegisterBasicsPutEvent(r => log.Info($"已经将{r}注册进系统"));
+        initAddRegisterBasicsPutEvent(r => getLog()?.Info($"已经将{r}注册进系统"));
         initAddRegisterBasicsPutEvent(voluntarilyAssignment);
         initAddRegisterBasicsInitBackEvent(r => registerBasics_isInit.SetValue(r, true));
         initAddRegisterBasicsInitBackEvent(r => r.initBack());
@@ -102,7 +102,7 @@ public class RegisterSystem {
         }
     }
 
-    public void initLog(ILog _log) {
+    public void initLog(ILogOut _log) {
         initTest();
         this.log = _log;
     }
@@ -253,13 +253,13 @@ public class RegisterSystem {
                 if (fieldRegisterAttribute is not null && fieldRegisterAttribute.registerType is not null) {
                     registerType = fieldRegisterAttribute.registerType;
                     if (!fieldInfo.FieldType.IsAssignableFrom(registerType)) {
-                        log.Error($"创建注册项的时候出错,类型不继承{typeof(RegisterBasics)} name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
+                        getLog()?.Error($"创建注册项的时候出错,类型不继承{typeof(RegisterBasics)} name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
                         continue;
                     }
                 }
 
                 if (registerType.IsAbstract) {
-                    log.Error($"创建注册项的时候出错,类型为抽象的 name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
+                    getLog()?.Error($"创建注册项的时候出错,类型为抽象的 name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
                     continue;
                 }
 
@@ -317,7 +317,7 @@ public class RegisterSystem {
             registerBasics_registerSystem.SetValue(registerBasics, this);
             RegisterManage? registerManage = getRegisterManageOfRegisterType(registerBasics.GetType());
             if (registerManage is null) {
-                log.Error($"注册{typeof(RegisterBasics)}时没有找到对应的{typeof(RegisterManage)},{typeof(RegisterBasics)}:{registerBasics.getName()},type:{registerBasics.GetType()}");
+                getLog()?.Error($"注册{typeof(RegisterBasics)}时没有找到对应的{typeof(RegisterManage)},{typeof(RegisterBasics)}:{registerBasics.getName()},type:{registerBasics.GetType()}");
                 registerBasicsList.RemoveAt(index);
                 index--;
                 continue;
@@ -472,5 +472,5 @@ public class RegisterSystem {
         }
     }
 
-    public ILog getLog() => log;
+    public ILogOut? getLog() => log;
 }
