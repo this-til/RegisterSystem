@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using log4net;
 
 namespace RegisterSystem;
 
