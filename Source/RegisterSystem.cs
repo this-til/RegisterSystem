@@ -36,17 +36,18 @@ public class RegisterSystem {
 
     protected readonly List<Type> allType = new List<Type>();
 
-    protected readonly FieldInfo registerManage_registerSystem = typeof(RegisterManage).GetField("registerSystem") ?? throw new Exception();
-    protected readonly FieldInfo registerManage_name = typeof(RegisterManage).GetField("name") ?? throw new Exception();
-    protected readonly FieldInfo registerManage_completeName = typeof(RegisterManage).GetField("completeName") ?? throw new Exception();
-    protected readonly FieldInfo registerManage_basicsRegisterManage = typeof(RegisterManage).GetField("basicsRegisterManage") ?? throw new Exception();
+    protected static readonly BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    protected readonly FieldInfo registerManage_registerSystem = typeof(RegisterManage).GetField("registerSystem", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerManage_name = typeof(RegisterManage).GetField("name", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerManage_completeName = typeof(RegisterManage).GetField("completeName", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerManage_basicsRegisterManage = typeof(RegisterManage).GetField("basicsRegisterManage", bindingFlags) ?? throw new Exception();
 
-    protected readonly FieldInfo registerBasics_registerManage = typeof(RegisterBasics).GetField("registerManage") ?? throw new Exception();
-    protected readonly FieldInfo registerBasics_name = typeof(RegisterBasics).GetField("name") ?? throw new Exception();
-    protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName") ?? throw new Exception();
-    protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem") ?? throw new Exception();
-    protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority") ?? throw new Exception();
-    protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit") ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_registerManage = typeof(RegisterBasics).GetField("registerManage", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_name = typeof(RegisterBasics).GetField("name", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority", bindingFlags) ?? throw new Exception();
+    protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit", bindingFlags) ?? throw new Exception();
 
     /// <summary>
     /// 一个标志，
@@ -152,9 +153,7 @@ public class RegisterSystem {
     }
 
     public void initRegisterSystem() {
-        if (isInit()) {
-            throw new Exception("RegisterSystem已经初始化过了");
-        }
+        initTest();
         _isInit = true;
 
         //从程序集中获取所有的类型

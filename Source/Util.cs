@@ -32,7 +32,7 @@ public class Util {
                 continue;
             }
             if (i != 0) {
-                stringBuilder.Append("_");
+                stringBuilder.Append('_');
             }
 
             char[] chars = stringCell.ToCharArray();

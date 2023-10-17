@@ -33,7 +33,6 @@ public abstract class RegisterManage {
     /// 由管理系统进行反射赋值
     /// </summary>
     protected RegisterManage? basicsRegisterManage;
-    
 
     /// <summary>
     /// 最早的初始化方法
@@ -87,6 +86,12 @@ public abstract class RegisterManage {
     public virtual IEnumerable<KeyValuePair<string, RegisterBasics>> forAll_erase() => registerMap;
 
     /// <summary>
+    /// 获取注册的数量
+    /// </summary>
+    /// <returns></returns>
+    public int getCount() => registerMap.Count;
+
+    /// <summary>
     /// 获取初始化的优先级
     /// 高于RegisterBasics自己的优先级
     /// </summary>
@@ -109,7 +114,7 @@ public abstract class RegisterManage {
     }
 }
 
-public class RegisterManage<T> : RegisterManage where T : RegisterBasics {
+public abstract class RegisterManage<T> : RegisterManage where T : RegisterBasics {
     public override Type getRegisterType() => typeof(T);
 
     public T? get(string key) {

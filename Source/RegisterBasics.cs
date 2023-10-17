@@ -94,7 +94,7 @@ public class RegisterBasics {
             throw new Exception("RegisterManage已经初始化了,拒绝一些操作");
         }
     }
-    
+
     public override string ToString() {
         return completeName;
     }
