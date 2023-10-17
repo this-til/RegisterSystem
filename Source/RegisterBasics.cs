@@ -30,7 +30,7 @@ public class RegisterBasics {
     /// 初始化时候的优先级
     /// </summary>
     protected int priority;
-    
+
     /// <summary>
     /// 已经初始化了
     /// 由<see cref="RegisterSystem"/>统进行反射赋值
@@ -46,7 +46,7 @@ public class RegisterBasics {
             if (registerBasics is null) {
                 Type type = keyValuePair.Value.registerType ?? keyValuePair.Key.FieldType;
                 registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new Exception();
-                keyValuePair.Key.SetValue(GetHashCode(), registerBasics);
+                keyValuePair.Key.SetValue(this, registerBasics);
             }
         }
     }

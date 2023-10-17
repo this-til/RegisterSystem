@@ -345,7 +345,7 @@ public class RegisterSystem {
         foreach (var registerBasics in registerBasicsList) {
             foreach (var keyValuePair in registerBasics.getAdditionalRegister()) {
                 needRegisterList.Add(keyValuePair.Key);
-                registerBasics_name.SetValue(keyValuePair.Value, $"{registerBasics.getName()}/{keyValuePair.Value}");
+                registerBasics_name.SetValue(keyValuePair.Key, $"{registerBasics.getName()}/{keyValuePair.Value}");
             }
         }
         if (needRegisterList.Count > 0) {

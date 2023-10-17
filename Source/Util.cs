@@ -58,10 +58,10 @@ public class Util {
         if (registerManage.getBasicsRegisterManage() is null) {
             return registerManage.getName();
         }
-        List<RegisterManage> list = new List<RegisterManage>(2);
+        List<string> list = new List<string>(2);
         RegisterManage? basics = registerManage;
         while (basics is not null) {
-            list.Add(basics);
+            list.Add(basics.getName());
             basics = basics.getBasicsRegisterManage();
         }
         list.Reverse();
