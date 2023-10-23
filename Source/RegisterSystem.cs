@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace RegisterSystem;
 
@@ -88,6 +90,7 @@ public class RegisterSystem {
         initAddRegisterManageAwakeInitEvent(r => nameRegisterManageMap.Add(r.getName(), r));
         initAddRegisterManageInitEvent(r => r.init());
         initAddRegisterManagePutEndEvent(voluntarilyAssignment);
+        initAddRegisterBasicsAwakeInitEvent(r => r.awakeInitFieldRegister());
         initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
         initAddRegisterBasicsInitEvent(r => r.init());
         initAddRegisterBasicsPutEvent(r => getLog()?.Info($"已经将{r}注册进系统"));
@@ -349,7 +352,7 @@ public class RegisterSystem {
             }
         }
         if (needRegisterList.Count > 0) {
-            unifyRegister(registerBasicsList);
+            unifyRegister(needRegisterList);
         }
     }
 

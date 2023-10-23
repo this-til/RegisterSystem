@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace RegisterSystem;
 
@@ -37,6 +39,17 @@ public class RegisterBasics {
     /// </summary>
     protected bool _isInit;
 
+    public void awakeInitFieldRegister() {
+        foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
+            RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
+            if (registerBasics is null) {
+                Type type = keyValuePair.Value.registerType ?? keyValuePair.Key.FieldType;
+                registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new Exception();
+                keyValuePair.Key.SetValue(this, registerBasics);
+            }
+        }
+    }
+
     /// <summary>
     /// 最早的初始化方法
     /// </summary>
@@ -70,7 +83,7 @@ public class RegisterBasics {
         foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
             RegisterBasics registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics ?? throw new Exception();
             string _name = keyValuePair.Key.Name;
-            if (string.IsNullOrEmpty(keyValuePair.Value.customName)) {
+            if (!string.IsNullOrEmpty(keyValuePair.Value.customName)) {
                 _name = keyValuePair.Value.customName;
             }
             yield return new KeyValuePair<RegisterBasics, string>(registerBasics, _name);

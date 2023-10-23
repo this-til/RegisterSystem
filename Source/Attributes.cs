@@ -1,4 +1,6 @@
-﻿namespace RegisterSystem; 
+﻿using System;
+
+namespace RegisterSystem; 
 
 /// <summary>
 /// 给RegisterManage提供默认注册项的一些元数据
