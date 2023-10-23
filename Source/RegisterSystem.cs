@@ -287,7 +287,10 @@ public class RegisterSystem {
 
         //从类型管理器中获取默认注册项
         foreach (var registerManage in classRegisterManageMap.Values) {
-            registerBasicsList.AddRange(registerManage.getDefaultRegisterItem());
+            foreach (var keyValuePair in registerManage.getDefaultRegisterItem()) {
+                registerBasicsList.Add(keyValuePair.Key);
+                registerBasics_name.SetValue(keyValuePair.Key, keyValuePair.Value);
+            }
         }
 
         foreach (var registerManage in classRegisterManageMap.Values) {
@@ -295,6 +298,17 @@ public class RegisterSystem {
         }
 
         unifyRegister(registerBasicsList);
+
+        List<RegisterBasics> secondRegisterBasicList = new List<RegisterBasics>();
+        foreach (var registerManage in classRegisterManageMap.Values) {
+            foreach (var keyValuePair in registerManage.getSecondDefaultRegisterItem()) {
+                secondRegisterBasicList.Add(keyValuePair.Key);
+                registerBasics_name.SetValue(keyValuePair.Key, keyValuePair.Value);
+            }
+        }
+        if (secondRegisterBasicList.Count > 0) {
+            unifyRegister(secondRegisterBasicList);
+        }
 
         foreach (var registerManage in classRegisterManageMap.Values) {
             registerManagePutEndEvent(registerManage);
@@ -393,11 +407,12 @@ public class RegisterSystem {
         return null;
     }
 
-    public RegisterManage? getRegisterManageOfVoluntarilyAssignment(FieldInfo fieldInfo, VoluntarilyAssignmentAttribute voluntarilyAssignmentAttribute) {
-        switch (voluntarilyAssignmentAttribute.voluntarilyAssignmentType) {
+    public RegisterManage? getRegisterManageOfVoluntarilyAssignment(FieldInfo fieldInfo, VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute) {
+        VoluntarilyAssignmentType voluntarilyAssignmentType = voluntarilyAssignmentAttribute?.voluntarilyAssignmentType ?? VoluntarilyAssignmentType.voluntarilyRegisterAttribute;
+        switch (voluntarilyAssignmentType) {
             case VoluntarilyAssignmentType.voluntarilyRegisterAttribute:
             case VoluntarilyAssignmentType.registerManage:
-                Type registerManageType = voluntarilyAssignmentAttribute.appointType ?? fieldInfo.FieldType;
+                Type registerManageType = voluntarilyAssignmentAttribute?.appointType ?? fieldInfo.FieldType;
                 RegisterManage? registerManage;
                 if (registerManageType.IsGenericType) {
                     Type registerBasicsType = registerManageType.GenericTypeArguments[0];
@@ -408,7 +423,7 @@ public class RegisterSystem {
                 }
                 return registerManage;
             case VoluntarilyAssignmentType.allName:
-                return getRegisterManageOfName(voluntarilyAssignmentAttribute.name);
+                return getRegisterManageOfName(voluntarilyAssignmentAttribute!.name);
             default:
                 return null;
         }
@@ -460,12 +475,8 @@ public class RegisterSystem {
                 continue;
             }
             VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute = fieldInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>();
-            if (voluntarilyAssignmentAttribute is null) {
-                continue;
-            }
-            if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
+            if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType) && voluntarilyAssignmentAttribute is not null) {
                 fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterBasicsOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
-                continue;
             }
             if (typeof(RegisterManage).IsAssignableFrom(fieldInfo.FieldType)) {
                 fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterManageOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));

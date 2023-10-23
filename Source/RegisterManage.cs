@@ -107,7 +107,14 @@ public abstract class RegisterManage {
     /// <summary>
     /// 获取默认的注册选项
     /// </summary>
-    public virtual IEnumerable<RegisterBasics> getDefaultRegisterItem() {
+    public virtual IEnumerable<KeyValuePair<RegisterBasics, string>> getDefaultRegisterItem() {
+        yield break;
+    }
+
+    /// <summary>
+    /// 获取第二波默认的注册选项
+    /// </summary>
+    public virtual IEnumerable<KeyValuePair<RegisterBasics, string>> getSecondDefaultRegisterItem() {
         yield break;
     }
 
