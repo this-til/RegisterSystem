@@ -66,6 +66,8 @@ public class RegisterSystem {
 
     protected event Action<RegisterManage> registerManageInitEvent;
 
+    protected event Action<RegisterManage> registerManageInitSecondEvent;
+
     /// <summary>
     /// 类型管理注册完所有的注册项后
     /// </summary>
@@ -89,7 +91,9 @@ public class RegisterSystem {
         initAddRegisterManageAwakeInitEvent(r => getLog()?.Info($"完成构建类型管理器{r}"));
         initAddRegisterManageAwakeInitEvent(r => nameRegisterManageMap.Add(r.getName(), r));
         initAddRegisterManageInitEvent(r => r.init());
+        initAddRegisterManageInitSecondEvent(r => r.initSecond());
         initAddRegisterManagePutEndEvent(voluntarilyAssignment);
+        initAddRegisterManagePutEndEvent(r => r.initEnd());
         initAddRegisterBasicsAwakeInitEvent(r => r.awakeInitFieldRegister());
         initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
         initAddRegisterBasicsInitEvent(r => r.init());
@@ -118,6 +122,11 @@ public class RegisterSystem {
     public void initAddRegisterManageInitEvent(Action<RegisterManage> action) {
         initTest();
         registerManageInitEvent += action;
+    }
+
+    public void initAddRegisterManageInitSecondEvent(Action<RegisterManage> action) {
+        initTest();
+        registerManageInitSecondEvent += action;
     }
 
     public void initAddRegisterManagePutEndEvent(Action<RegisterManage> action) {
@@ -306,6 +315,11 @@ public class RegisterSystem {
                 registerBasics_name.SetValue(keyValuePair.Key, keyValuePair.Value);
             }
         }
+
+        foreach (var registerManage in classRegisterManageMap.Values) {
+            registerManageInitSecondEvent(registerManage);
+        }
+
         if (secondRegisterBasicList.Count > 0) {
             unifyRegister(secondRegisterBasicList);
         }

@@ -50,6 +50,18 @@ public abstract class RegisterManage {
     public virtual void init() {
     }
 
+    /// <summary>
+    /// 给SecondDefaultRegister提供的注册项配置默认数据
+    /// </summary>
+    public virtual void initSecond() {
+    }
+
+    /// <summary>
+    /// 注册结束时调用
+    /// </summary>
+    public virtual void initEnd() {
+    }
+
     public string getCompleteName() => completeName;
 
     public string getName() => name;
