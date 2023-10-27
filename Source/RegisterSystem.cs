@@ -241,7 +241,42 @@ public class RegisterSystem {
 
         //直接通过定义的静态字段获取注册项
         foreach (var keyValuePair in classRegisterManageMap) {
-            foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) {
+            foreach (var propertyInfo in keyValuePair.Key.GetProperties(BindingFlags.Static | BindingFlags.Public)) {
+                if (!Util.isEffective(propertyInfo)) {
+                    continue;
+                }
+                if (!typeof(RegisterBasics).IsAssignableFrom(propertyInfo.PropertyType)) {
+                    continue;
+                }
+
+                FieldRegisterAttribute? fieldRegisterAttribute = propertyInfo.GetCustomAttribute<FieldRegisterAttribute>();
+
+                string name = propertyInfo.Name;
+                if (fieldRegisterAttribute is not null && string.IsNullOrEmpty(fieldRegisterAttribute.customName)) {
+                    name = fieldRegisterAttribute.customName;
+                }
+
+                Type registerType = propertyInfo.PropertyType;
+                if (fieldRegisterAttribute is not null && fieldRegisterAttribute.registerType is not null) {
+                    registerType = fieldRegisterAttribute.registerType;
+                    if (!propertyInfo.PropertyType.IsAssignableFrom(registerType)) {
+                        getLog()?.Error($"创建注册项的时候出错,类型不继承{typeof(RegisterBasics)} name:{name},PropertyInfo:{propertyInfo},type:{registerType.AssemblyQualifiedName}");
+                        continue;
+                    }
+                }
+
+                if (registerType.IsAbstract) {
+                    getLog()?.Error($"创建注册项的时候出错,类型为抽象的 name:{name},PropertyInfo:{propertyInfo},type:{registerType.AssemblyQualifiedName}");
+                    continue;
+                }
+
+                RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
+                propertyInfo.SetValue(null, registerBasics);
+                registerBasics_name.SetValue(registerBasics, name);
+                registerBasicsList.Add(registerBasics);
+            }
+
+            foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public)) {
                 if (!Util.isEffective(fieldInfo)) {
                     continue;
                 }
@@ -251,7 +286,6 @@ public class RegisterSystem {
                 if (fieldInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>() is not null) {
                     continue;
                 }
-
                 FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
 
                 string name = fieldInfo.Name;
@@ -273,8 +307,8 @@ public class RegisterSystem {
                     continue;
                 }
 
-                RegisterBasics registerBasics = Activator.CreateInstance(fieldInfo.FieldType) as RegisterBasics ?? throw new NullReferenceException();
-                fieldInfo.SetValue(fieldInfo.IsStatic ? null : keyValuePair.Value, registerBasics);
+                RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
+                fieldInfo.SetValue(null, registerBasics);
                 registerBasics_name.SetValue(registerBasics, name);
                 registerBasicsList.Add(registerBasics);
             }

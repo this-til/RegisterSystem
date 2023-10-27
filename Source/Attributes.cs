@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RegisterSystem; 
+namespace RegisterSystem;
 
 /// <summary>
 /// 给RegisterManage提供默认注册项的一些元数据
@@ -55,3 +55,9 @@ public class VoluntarilyAssignmentAttribute : Attribute {
     public VoluntarilyAssignmentType voluntarilyAssignmentType = VoluntarilyAssignmentType.voluntarilyRegisterAttribute;
 }
 
+/// <summary>
+/// 忽略注册字段
+/// </summary>
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+public class IgnoreRegisterAttribute : Attribute {
+}
