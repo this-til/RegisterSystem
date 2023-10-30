@@ -16,7 +16,17 @@ public class Util {
         return true;
     }
 
-    public static bool isEffective(MemberInfo memberInfo) {
+    public static bool isEffective(FieldInfo memberInfo) {
+        if (memberInfo.GetCustomAttribute<ObsoleteAttribute>() is not null) {
+            return false;
+        }
+        if (memberInfo.GetCustomAttribute<IgnoreRegisterAttribute>() is not null) {
+            return false;
+        }
+        return true;
+    }
+    
+    public static bool isEffective(PropertyInfo memberInfo) {
         if (memberInfo.GetCustomAttribute<ObsoleteAttribute>() is not null) {
             return false;
         }
