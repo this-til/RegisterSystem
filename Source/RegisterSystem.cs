@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace RegisterSystem {
@@ -191,7 +192,7 @@ namespace RegisterSystem {
             }
 
             //创建类型管理器
-            foreach (var type in classRegisterManageMap.Keys) {
+            foreach (var type in classRegisterManageMap.Keys.ToArray()) {
                 RegisterManage registerManage = Activator.CreateInstance(type) as RegisterManage ?? throw new Exception();
                 registerManage_registerSystem.SetValue(registerManage, this);
                 //registerManage_name.SetValue(registerManage, Util.ofPath(registerManage.GetType()));
@@ -314,12 +315,12 @@ namespace RegisterSystem {
             }
 
             //添加自动注册选项
-            foreach (var type in allVoluntarilyRegisterAssetMap.Keys) {
+            foreach (var type in allVoluntarilyRegisterAssetMap.Keys.ToArray()) {
                 VoluntarilyRegisterAttribute voluntarilyRegisterAttribute = type.GetCustomAttribute<VoluntarilyRegisterAttribute>() ?? throw new NullReferenceException();
                 RegisterBasics registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new NullReferenceException();
                 allVoluntarilyRegisterAssetMap[type] = registerBasics;
                 string name = type.Name;
-                if (string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName)) {
+                if (!string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName)) {
                     name = voluntarilyRegisterAttribute.customName;
                 }
                 registerBasics_name.SetValue(registerBasics, name);

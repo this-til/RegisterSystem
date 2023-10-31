@@ -1,12 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>9</LangVersion>
         <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>10</LangVersion>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="System.Runtime" Version="4.1.2" />
+      <None Remove="Libs\System.Runtime.dll" />
     </ItemGroup>
 </Project>
