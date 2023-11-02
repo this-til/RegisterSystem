@@ -237,7 +237,7 @@ namespace RegisterSystem {
                 registerManageAwakeInitEvent(registerManage);
             }
 
-            List<RegisterBasics> registerBasicsList = new List<RegisterBasics>();
+            List<RegisterBasicsMetadata> registerBasicsMetadata = new List<RegisterBasicsMetadata>();
 
             //直接通过定义的静态字段获取注册项
             foreach (var keyValuePair in classRegisterManageMap) {
@@ -272,8 +272,12 @@ namespace RegisterSystem {
 
                     RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
                     propertyInfo.SetValue(null, registerBasics);
-                    registerBasics_name.SetValue(registerBasics, name);
-                    registerBasicsList.Add(registerBasics);
+                    registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
+                        registerBasics = registerBasics,
+                        name = name,
+                        priority = fieldRegisterAttribute?.priority ?? 0,
+                        registerManage = keyValuePair.Value
+                    });
                 }
 
                 foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public)) {
@@ -309,8 +313,12 @@ namespace RegisterSystem {
 
                     RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
                     fieldInfo.SetValue(null, registerBasics);
-                    registerBasics_name.SetValue(registerBasics, name);
-                    registerBasicsList.Add(registerBasics);
+                    registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
+                        registerBasics = registerBasics,
+                        name = name,
+                        priority = fieldRegisterAttribute?.priority ?? 0,
+                        registerManage = keyValuePair.Value
+                    });
                 }
             }
 
@@ -319,34 +327,34 @@ namespace RegisterSystem {
                 VoluntarilyRegisterAttribute voluntarilyRegisterAttribute = type.GetCustomAttribute<VoluntarilyRegisterAttribute>() ?? throw new NullReferenceException();
                 RegisterBasics registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new NullReferenceException();
                 allVoluntarilyRegisterAssetMap[type] = registerBasics;
-                string name = type.Name;
-                if (!string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName)) {
-                    name = voluntarilyRegisterAttribute.customName;
-                }
-                registerBasics_name.SetValue(registerBasics, name);
-                registerBasics_priority.SetValue(registerBasics, voluntarilyRegisterAttribute.priority);
-                registerBasicsList.Add(registerBasics);
+                registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
+                    registerBasics = registerBasics,
+                    name = string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName) ? type.Name : voluntarilyRegisterAttribute.customName,
+                    priority = voluntarilyRegisterAttribute.priority,
+                    registerManageType = voluntarilyRegisterAttribute.registerManageType
+                });
             }
 
             //从类型管理器中获取默认注册项
             foreach (var registerManage in classRegisterManageMap.Values) {
-                foreach (var keyValuePair in registerManage.getDefaultRegisterItem()) {
-                    registerBasicsList.Add(keyValuePair.Key);
-                    registerBasics_name.SetValue(keyValuePair.Key, keyValuePair.Value);
-                }
+                registerBasicsMetadata.AddRange(registerManage.getDefaultRegisterItem());
             }
 
             foreach (var registerManage in classRegisterManageMap.Values) {
                 registerManageInitEvent(registerManage);
             }
 
-            unifyRegister(registerBasicsList);
+            foreach (var basicsMetadata in registerBasicsMetadata) {
+                mateRegisterBasics(basicsMetadata);
+            }
+
+            unifyRegister(registerBasicsMetadata.Select(m => m.registerBasics).ToList());
 
             List<RegisterBasics> secondRegisterBasicList = new List<RegisterBasics>();
             foreach (var registerManage in classRegisterManageMap.Values) {
-                foreach (var keyValuePair in registerManage.getSecondDefaultRegisterItem()) {
-                    secondRegisterBasicList.Add(keyValuePair.Key);
-                    registerBasics_name.SetValue(keyValuePair.Key, keyValuePair.Value);
+                foreach (var basicsMetadata in registerManage.getSecondDefaultRegisterItem()) {
+                    mateRegisterBasics(basicsMetadata);
+                    secondRegisterBasicList.Add(basicsMetadata.registerBasics);
                 }
             }
 
@@ -378,23 +386,16 @@ namespace RegisterSystem {
             for (var index = 0; index < registerBasicsList.Count; index++) {
                 var registerBasics = registerBasicsList[index];
                 registerBasics_registerSystem.SetValue(registerBasics, this);
-                RegisterManage? registerManage = getRegisterManageOfRegisterType(registerBasics.GetType());
-                if (registerManage is null) {
+                registerBasics_completeName.SetValue(registerBasics, $"{registerBasics.getRegisterManage().getCompleteName()}@{registerBasics.getName()}");
+                if (registerBasics.getRegisterManage() is null) {
                     getLog()?.Error(
                         $"注册{typeof(RegisterBasics)}时没有找到对应的{typeof(RegisterManage)},{typeof(RegisterBasics)}:{registerBasics.getName()},type:{registerBasics.GetType()}");
                     registerBasicsList.RemoveAt(index);
                     index--;
-                    continue;
                 }
-                registerBasics_registerManage.SetValue(registerBasics, registerManage);
-                registerBasics_completeName.SetValue(registerBasics, $"{registerManage.getCompleteName()}@{registerBasics.getName()}");
             }
-            registerBasicsList.Sort((a, b) => {
-                if (!a.getRegisterManage().Equals(b.getRegisterManage())) {
-                    return a.getRegisterManage().getPriority() - b.getRegisterManage().getPriority();
-                }
-                return a.getPriority() - b.getPriority();
-            });
+            registerBasicsList.Sort((a, b) => a.getRegisterManage().getPriority().CompareTo(b.getRegisterManage().getPriority()));
+            registerBasicsList.Sort((a, b) => a.getPriority().CompareTo(b.getPriority()));
             foreach (var registerBasics in registerBasicsList) {
                 registerBasicsAwakeInitEvent(registerBasics);
             }
@@ -409,14 +410,28 @@ namespace RegisterSystem {
                 registerBasicsInitEvent(registerBasics);
             }
             foreach (var registerBasics in registerBasicsList) {
-                foreach (var keyValuePair in registerBasics.getAdditionalRegister()) {
+                /*foreach (var keyValuePair in registerBasics.getAdditionalRegister()) {
                     needRegisterList.Add(keyValuePair.Key);
                     registerBasics_name.SetValue(keyValuePair.Key, $"{registerBasics.getName()}/{keyValuePair.Value}");
+                }*/
+                foreach (var registerBasicsMetadata in registerBasics.getAdditionalRegister()) {
+                    mateRegisterBasics(registerBasicsMetadata);
+                    needRegisterList.Add(registerBasicsMetadata.registerBasics);
                 }
             }
             if (needRegisterList.Count > 0) {
                 unifyRegister(needRegisterList);
             }
+        }
+
+        protected void mateRegisterBasics(RegisterBasicsMetadata registerBasicsMetadata) {
+            registerBasics_name.SetValue(registerBasicsMetadata.registerBasics, registerBasicsMetadata.name);
+            registerBasics_priority.SetValue(registerBasicsMetadata.registerBasics, registerBasicsMetadata.priority);
+            RegisterManage? registerManage = registerBasicsMetadata.registerManage ??
+                                             (registerBasicsMetadata.registerManageType is not null
+                                                 ? getRegisterManageOfManageType(registerBasicsMetadata.registerManageType)
+                                                 : getRegisterManageOfRegisterType(registerBasicsMetadata.registerBasics.GetType()));
+            registerBasics_registerManage.SetValue(registerBasicsMetadata.registerBasics, registerManage);
         }
 
         public RegisterManage? getRegisterManageOfManageType(Type? registerManageClass) {
@@ -525,6 +540,9 @@ namespace RegisterSystem {
                     continue;
                 }
                 VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute = fieldInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>();
+                if (!(voluntarilyAssignmentAttribute?.use ?? true)) {
+                    continue;
+                }
                 if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType) && voluntarilyAssignmentAttribute is not null) {
                     fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterBasicsOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
                 }

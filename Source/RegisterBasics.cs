@@ -20,7 +20,7 @@ namespace RegisterSystem {
         /// <summary>
         /// 由<see cref="RegisterSystem"/>统进行反射赋值
         /// </summary>
-        protected RegisterManage registerManage;
+        [VoluntarilyAssignment(use = false)] protected RegisterManage registerManage;
 
         /// <summary>
         /// 由<see cref="RegisterSystem"/>统进行反射赋值
@@ -78,14 +78,19 @@ namespace RegisterSystem {
         /// <summary>
         /// 获取附加的注册项目
         /// </summary>
-        public virtual IEnumerable<KeyValuePair<RegisterBasics, string>> getAdditionalRegister() {
+        public virtual IEnumerable<RegisterBasicsMetadata> getAdditionalRegister() {
             foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
                 RegisterBasics registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics ?? throw new Exception();
                 string _name = keyValuePair.Key.Name;
                 if (!string.IsNullOrEmpty(keyValuePair.Value.customName)) {
                     _name = keyValuePair.Value.customName;
                 }
-                yield return new KeyValuePair<RegisterBasics, string>(registerBasics, _name);
+                yield return new RegisterBasicsMetadata() {
+                    registerBasics = registerBasics,
+                    name = $"{name}/{_name}",
+                    registerManageType = keyValuePair.Value.registerManageType,
+                    priority = keyValuePair.Value.priority
+                };
             }
         }
 

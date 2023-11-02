@@ -118,14 +118,14 @@ namespace RegisterSystem {
         /// <summary>
         /// 获取默认的注册选项
         /// </summary>
-        public virtual IEnumerable<KeyValuePair<RegisterBasics, string>> getDefaultRegisterItem() {
+        public virtual IEnumerable<RegisterBasicsMetadata> getDefaultRegisterItem() {
             yield break;
         }
 
         /// <summary>
         /// 获取第二波默认的注册选项
         /// </summary>
-        public virtual IEnumerable<KeyValuePair<RegisterBasics, string>> getSecondDefaultRegisterItem() {
+        public virtual IEnumerable<RegisterBasicsMetadata> getSecondDefaultRegisterItem() {
             yield break;
         }
 

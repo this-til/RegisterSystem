@@ -7,6 +7,11 @@ namespace RegisterSystem {
     [AttributeUsage(AttributeTargets.Field)]
     public class FieldRegisterAttribute : Attribute {
         /// <summary>
+        /// 优先级
+        /// </summary>
+        public int priority;
+
+        /// <summary>
         /// 自定义的名称
         /// </summary>
         public string customName = String.Empty;
@@ -15,6 +20,11 @@ namespace RegisterSystem {
         /// 注册项的类型
         /// </summary>
         public Type? registerType;
+
+        /// <summary>
+        /// 给定一个类型，指向要注册进的管理器
+        /// </summary>
+        public Type? registerManageType;
     }
 
     /// <summary>
@@ -24,7 +34,6 @@ namespace RegisterSystem {
     public class VoluntarilyRegisterAttribute : System.Attribute {
         /// <summary>
         /// 优先级
-        /// 通过反射
         /// </summary>
         public int priority;
 
@@ -32,6 +41,11 @@ namespace RegisterSystem {
         /// 自定义的名称
         /// </summary>
         public string customName = String.Empty;
+
+        /// <summary>
+        /// 给定一个类型，指向要注册进的管理器
+        /// </summary>
+        public Type? registerManageType = null;
     }
 
     /// <summary>
@@ -39,8 +53,10 @@ namespace RegisterSystem {
     /// 作用于RegisterBasics和RegisterManage
     /// 在RegisterManage中voluntarilyRegisterAttribute和registerManage是等同的，寻找逻辑都是根据类型
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class VoluntarilyAssignmentAttribute : Attribute {
+        public bool use = true;
+
         /// <summary>
         /// 使用指定类型寻找
         /// </summary>
@@ -61,4 +77,3 @@ namespace RegisterSystem {
     public class IgnoreRegisterAttribute : Attribute {
     }
 }
-

@@ -79,6 +79,12 @@ namespace RegisterSystem {
             return c;
         }
     }
-    
-}
 
+    public class RegisterBasicsMetadata {
+        public RegisterBasics registerBasics;
+        public string name;
+        public RegisterManage? registerManage;
+        public Type? registerManageType;
+        public int priority;
+    }
+}
