@@ -6,37 +6,42 @@ namespace RegisterSystem {
     public class RegisterBasics {
         /// <summary>
         /// 注册项的完整的名称
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected string completeName;
+        protected internal string completeName;
 
         /// <summary>
         /// 注册项的名称
         /// 使用此名称进行注册key
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected string name;
+        protected internal string name;
 
         /// <summary>
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        [VoluntarilyAssignment(use = false)] protected RegisterManage registerManage;
+        [VoluntarilyAssignment(use = false)] protected internal RegisterManage registerManage;
 
         /// <summary>
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected RegisterSystem registerSystem;
+        protected internal RegisterSystem registerSystem;
 
         /// <summary>
         /// 初始化时候的优先级
         /// </summary>
-        protected int priority;
+        protected internal int priority;
 
         /// <summary>
-        /// 已经初始化了
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 初始化结束了
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected bool _isInit;
+        protected internal bool isInitEnd;
+
+        /// <summary>
+        /// 在RegisterManage最顶层的索引
+        /// </summary>
+        protected internal int index;
 
         public void awakeInitFieldRegister() {
             foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
@@ -72,7 +77,7 @@ namespace RegisterSystem {
         /// <summary>
         /// 初始化结束后统一调用
         /// </summary>
-        public virtual void initBack() {
+        public virtual void initEnd() {
         }
 
         /// <summary>
@@ -104,13 +109,13 @@ namespace RegisterSystem {
 
         public int getPriority() => priority;
 
-        public bool isInit() => _isInit;
-
         protected void initTest() {
-            if (isInit()) {
+            if (isInitEnd) {
                 throw new Exception("RegisterManage已经初始化了,拒绝一些操作");
             }
         }
+
+        public int getIndex() => index;
 
         public override string ToString() {
             return completeName;

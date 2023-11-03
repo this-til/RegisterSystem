@@ -9,31 +9,38 @@ namespace RegisterSystem {
     /// </summary>
     public abstract class RegisterManage {
         protected Dictionary<string, RegisterBasics> registerMap = new Dictionary<string, RegisterBasics>();
+        protected List<RegisterBasics>? registerList;
 
         /// <summary>
         /// 对应的注册管理系统
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected RegisterSystem registerSystem;
+        protected internal RegisterSystem registerSystem;
 
         /// <summary>
         /// 类管理的完整的名称
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected string completeName;
+        protected internal string completeName;
 
         /// <summary>
         /// 类管理的名称
         /// 使用此名称进行注册key
-        /// 由<see cref="RegisterSystem"/>统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected string name;
+        protected internal string name;
 
         /// <summary>
         /// 作为基础的类管理类型
-        /// 由管理系统进行反射赋值
+        /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected RegisterManage? basicsRegisterManage;
+        [VoluntarilyAssignment(use = false)] protected internal RegisterManage? basicsRegisterManage;
+
+        /// <summary>
+        /// 初始化结束了
+        /// 由<see cref="RegisterSystem"/>进行赋值
+        /// </summary>
+        protected internal bool isInitEnd;
 
         /// <summary>
         /// 最早的初始化方法
@@ -79,8 +86,12 @@ namespace RegisterSystem {
         /// 注册操作
         /// </summary>
         public virtual void put(RegisterBasics register, bool fromSon) {
+            if (basicsRegisterManage is null) {
+                register.index = getCount();
+            }
             basicsRegisterManage?.put(register, true);
             registerMap.Add(register.getName(), register);
+            registerList.Add(register);
         }
 
         /// <summary>
@@ -96,7 +107,13 @@ namespace RegisterSystem {
         /// <summary>
         /// 输出所有的注册项
         /// </summary>
-        public virtual IEnumerable<KeyValuePair<string, RegisterBasics>> forAll_erase() => registerMap;
+        public IEnumerable<RegisterBasics> forAll_erase() {
+            if (!isInitEnd) {
+                return registerMap.Values;
+            }
+            registerList ??= new List<RegisterBasics>(registerMap.Values);
+            return registerList;
+        }
 
         /// <summary>
         /// 获取注册的数量
@@ -135,15 +152,21 @@ namespace RegisterSystem {
     }
 
     public abstract class RegisterManage<T> : RegisterManage where T : RegisterBasics {
+        protected List<T>? registerGenericityList;
+
         public override Type getRegisterType() => typeof(T);
 
         public T? get(string key) {
             return get_erase(key) as T;
         }
 
-        public virtual IEnumerable<KeyValuePair<string, T>> forAll() {
-            foreach (var keyValuePair in forAll_erase()) {
-                yield return new KeyValuePair<string, T>(keyValuePair.Key, keyValuePair.Value as T ?? throw new Exception());
+        /// <summary>
+        /// 遍历所有的注册项
+        /// </summary>
+        /// <returns></returns>
+        public virtual IEnumerable<T> forAll() {
+            if (!isInitEnd) {
+               
             }
         }
     }

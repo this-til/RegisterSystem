@@ -38,18 +38,18 @@ namespace RegisterSystem {
 
         protected readonly List<Type> allType = new List<Type>();
 
-        protected static readonly BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        protected readonly FieldInfo registerManage_registerSystem = typeof(RegisterManage).GetField("registerSystem", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerManage_name = typeof(RegisterManage).GetField("name", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerManage_completeName = typeof(RegisterManage).GetField("completeName", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerManage_basicsRegisterManage = typeof(RegisterManage).GetField("basicsRegisterManage", bindingFlags) ?? throw new Exception();
+        //protected static readonly BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        //protected readonly FieldInfo registerManage_registerSystem = typeof(RegisterManage).GetField("registerSystem", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerManage_name = typeof(RegisterManage).GetField("name", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerManage_completeName = typeof(RegisterManage).GetField("completeName", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerManage_basicsRegisterManage = typeof(RegisterManage).GetField("basicsRegisterManage", bindingFlags) ?? throw new Exception();
 
-        protected readonly FieldInfo registerBasics_registerManage = typeof(RegisterBasics).GetField("registerManage", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerBasics_name = typeof(RegisterBasics).GetField("name", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority", bindingFlags) ?? throw new Exception();
-        protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_registerManage = typeof(RegisterBasics).GetField("registerManage", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_name = typeof(RegisterBasics).GetField("name", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority", bindingFlags) ?? throw new Exception();
+        //protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit", bindingFlags) ?? throw new Exception();
 
         /// <summary>
         /// 一个标志，
@@ -82,7 +82,7 @@ namespace RegisterSystem {
         /// </summary>
         protected event Action<RegisterBasics> registerBasicsPutEvent;
 
-        protected event Action<RegisterBasics> registerBasicsInitBackEvent;
+        protected event Action<RegisterBasics> registerBasicsInitEndEvent;
 
         public bool isInit() => _isInit;
 
@@ -93,14 +93,15 @@ namespace RegisterSystem {
             initAddRegisterManageInitEvent(r => r.init());
             initAddRegisterManageInitSecondEvent(r => r.initSecond());
             initAddRegisterManagePutEndEvent(voluntarilyAssignment);
+            initAddRegisterManagePutEndEvent(r => r.isInitEnd = true);
             initAddRegisterManagePutEndEvent(r => r.initEnd());
             initAddRegisterBasicsAwakeInitEvent(r => r.awakeInitFieldRegister());
             initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
             initAddRegisterBasicsInitEvent(r => r.init());
             initAddRegisterBasicsPutEvent(r => getLog()?.Info($"已经将{r}注册进系统"));
             initAddRegisterBasicsPutEvent(voluntarilyAssignment);
-            initAddRegisterBasicsInitBackEvent(r => registerBasics_isInit.SetValue(r, true));
-            initAddRegisterBasicsInitBackEvent(r => r.initBack());
+            initAddRegisterBasicsInitEndEvent(r => r.isInitEnd = true);
+            initAddRegisterBasicsInitEndEvent(r => r.initEnd());
         }
 
         protected void initTest() {
@@ -149,9 +150,9 @@ namespace RegisterSystem {
             registerBasicsPutEvent += action;
         }
 
-        public void initAddRegisterBasicsInitBackEvent(Action<RegisterBasics> action) {
+        public void initAddRegisterBasicsInitEndEvent(Action<RegisterBasics> action) {
             initTest();
-            registerBasicsInitBackEvent += action;
+            registerBasicsInitEndEvent += action;
         }
 
         public void initAddAllManagedAssembly(params Assembly[]? assemblies) {
@@ -194,9 +195,8 @@ namespace RegisterSystem {
             //创建类型管理器
             foreach (var type in classRegisterManageMap.Keys.ToArray()) {
                 RegisterManage registerManage = Activator.CreateInstance(type) as RegisterManage ?? throw new Exception();
-                registerManage_registerSystem.SetValue(registerManage, this);
-                //registerManage_name.SetValue(registerManage, Util.ofPath(registerManage.GetType()));
-                registerManage_name.SetValue(registerManage, registerManage.GetType().Name);
+                registerManage.registerSystem = this;
+                registerManage.name = registerManage.GetType().Name;
                 classRegisterManageMap[type] = registerManage;
             }
 
@@ -207,9 +207,13 @@ namespace RegisterSystem {
 
                 RegisterManage? basicsRegisterManage = getRegisterManageOfManageType(basicsRegisterManageType);
 
-                if (basicsRegisterManage is not null) {
-                    registerManage_basicsRegisterManage.SetValue(registerManage, basicsRegisterManage);
+                if (basicsRegisterManage is not null && basicsRegisterManage.getRegisterType().IsAssignableFrom(registerManage.getRegisterType())) {
+                    throw new Exception($"注册管理者父类型错误," +
+                                        $"RegisterManage:{registerManage}" +
+                                        $"BasicsRegisterManage:{basicsRegisterManage}");
                 }
+
+                registerManage.basicsRegisterManage = basicsRegisterManage;
 
                 if (!registerManageMap.ContainsKey(registerType)) {
                     registerManageMap.Add(registerType, registerManage);
@@ -218,7 +222,9 @@ namespace RegisterSystem {
                 RegisterManage oldRegisterManage = registerManageMap[registerType];
                 if (oldRegisterManage.getBasicsRegisterManage() is null) {
                     if (basicsRegisterManage is null) {
-                        throw new Exception($"注册管理者冲突,注册类型[{registerType}],冲突管理者[{oldRegisterManage},{registerManage}]");
+                        throw new Exception($"注册管理者冲突," +
+                                            $"registerType:{registerType}," +
+                                            $"RegisterManage[{oldRegisterManage},{registerManage}]");
                     }
                     continue;
                 }
@@ -229,7 +235,7 @@ namespace RegisterSystem {
 
             //对类型管理器赋值名称
             foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManage_completeName.SetValue(registerManage, Util.ofCompleteName(registerManage));
+                registerManage.completeName = Util.ofCompleteName(registerManage);
             }
 
             //回调
@@ -372,7 +378,7 @@ namespace RegisterSystem {
 
             foreach (var registerManage in classRegisterManageMap.Values) {
                 foreach (var keyValuePair in registerManage.forAll_erase()) {
-                    registerBasicsInitBackEvent(keyValuePair.Value);
+                    registerBasicsInitEndEvent(keyValuePair);
                 }
             }
         }
@@ -385,8 +391,8 @@ namespace RegisterSystem {
             List<RegisterBasics> needRegisterList = new List<RegisterBasics>();
             for (var index = 0; index < registerBasicsList.Count; index++) {
                 var registerBasics = registerBasicsList[index];
-                registerBasics_registerSystem.SetValue(registerBasics, this);
-                registerBasics_completeName.SetValue(registerBasics, $"{registerBasics.getRegisterManage().getCompleteName()}@{registerBasics.getName()}");
+                registerBasics.registerSystem = this;
+                registerBasics.completeName = $"{registerBasics.getRegisterManage().getCompleteName()}@{registerBasics.getName()}";
                 if (registerBasics.getRegisterManage() is null) {
                     getLog()?.Error(
                         $"注册{typeof(RegisterBasics)}时没有找到对应的{typeof(RegisterManage)},{typeof(RegisterBasics)}:{registerBasics.getName()},type:{registerBasics.GetType()}");
@@ -425,13 +431,13 @@ namespace RegisterSystem {
         }
 
         protected void mateRegisterBasics(RegisterBasicsMetadata registerBasicsMetadata) {
-            registerBasics_name.SetValue(registerBasicsMetadata.registerBasics, registerBasicsMetadata.name);
-            registerBasics_priority.SetValue(registerBasicsMetadata.registerBasics, registerBasicsMetadata.priority);
+            registerBasicsMetadata.registerBasics.name = registerBasicsMetadata.name;
+            registerBasicsMetadata.registerBasics.priority = registerBasicsMetadata.priority;
             RegisterManage? registerManage = registerBasicsMetadata.registerManage ??
                                              (registerBasicsMetadata.registerManageType is not null
                                                  ? getRegisterManageOfManageType(registerBasicsMetadata.registerManageType)
                                                  : getRegisterManageOfRegisterType(registerBasicsMetadata.registerBasics.GetType()));
-            registerBasics_registerManage.SetValue(registerBasicsMetadata.registerBasics, registerManage);
+            registerBasicsMetadata.registerBasics.registerManage = registerManage;
         }
 
         public RegisterManage? getRegisterManageOfManageType(Type? registerManageClass) {
