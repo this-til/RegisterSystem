@@ -207,10 +207,16 @@ namespace RegisterSystem {
 
                 RegisterManage? basicsRegisterManage = getRegisterManageOfManageType(basicsRegisterManageType);
 
-                if (basicsRegisterManage is not null && basicsRegisterManage.getRegisterType().IsAssignableFrom(registerManage.getRegisterType())) {
-                    throw new Exception($"注册管理者父类型错误," +
-                                        $"RegisterManage:{registerManage}" +
-                                        $"BasicsRegisterManage:{basicsRegisterManage}");
+                if (basicsRegisterManage is not null) {
+                    bool conflict = !basicsRegisterManage.getRegisterType().IsAssignableFrom(registerType);
+                    if (basicsRegisterManage.getRegisterType().IsGenericType && registerType.IsGenericType) {
+                        conflict |= !basicsRegisterManage.getRegisterType().GetGenericTypeDefinition().IsAssignableFrom(registerType.GetGenericTypeDefinition());
+                    }
+                    if (conflict) {
+                        throw new Exception($"注册管理者父类型错误," +
+                                            $"RegisterManage:{registerManage}" +
+                                            $"BasicsRegisterManage:{basicsRegisterManage}");
+                    }
                 }
 
                 registerManage.basicsRegisterManage = basicsRegisterManage;
@@ -240,7 +246,13 @@ namespace RegisterSystem {
 
             //回调
             foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManageAwakeInitEvent(registerManage);
+                try {
+                    registerManageAwakeInitEvent(registerManage);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerManageAwakeInitEvent时发生错误,RegisterManage:{registerManage}");
+                    getLog()?.Error(e);
+                }
             }
 
             List<RegisterBasicsMetadata> registerBasicsMetadata = new List<RegisterBasicsMetadata>();
@@ -347,7 +359,13 @@ namespace RegisterSystem {
             }
 
             foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManageInitEvent(registerManage);
+                try {
+                    registerManageInitEvent(registerManage);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerManageInitEvent时发生错误,RegisterManage:{registerManage}");
+                    getLog()?.Error(e);
+                }
             }
 
             foreach (var basicsMetadata in registerBasicsMetadata) {
@@ -365,7 +383,13 @@ namespace RegisterSystem {
             }
 
             foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManageInitSecondEvent(registerManage);
+                try {
+                    registerManageInitSecondEvent(registerManage);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerManageInitSecondEvent时发生错误,RegisterManage:{registerManage}");
+                    getLog()?.Error(e);
+                }
             }
 
             if (secondRegisterBasicList.Count > 0) {
@@ -373,12 +397,24 @@ namespace RegisterSystem {
             }
 
             foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManagePutEndEvent(registerManage);
+                try {
+                    registerManagePutEndEvent(registerManage);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerManagePutEndEvent时发生错误,RegisterManage:{registerManage}");
+                    getLog()?.Error(e);
+                }
             }
 
             foreach (var registerManage in classRegisterManageMap.Values) {
-                foreach (var keyValuePair in registerManage.forAll_erase()) {
-                    registerBasicsInitEndEvent(keyValuePair);
+                foreach (var registerBasics in registerManage.forAll_erase()) {
+                    try {
+                        registerBasicsInitEndEvent(registerBasics);
+                    }
+                    catch (Exception e) {
+                        getLog()?.Error($"registerBasicsInitEndEvent时发生错误,registerBasics:{registerBasics}");
+                        getLog()?.Error(e);
+                    }
                 }
             }
         }
@@ -403,17 +439,35 @@ namespace RegisterSystem {
             registerBasicsList.Sort((a, b) => a.getRegisterManage().getPriority().CompareTo(b.getRegisterManage().getPriority()));
             registerBasicsList.Sort((a, b) => a.getPriority().CompareTo(b.getPriority()));
             foreach (var registerBasics in registerBasicsList) {
-                registerBasicsAwakeInitEvent(registerBasics);
+                try {
+                    registerBasicsAwakeInitEvent(registerBasics);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerBasicsAwakeInitEvent时发生错误,registerBasics:{registerBasics}");
+                    getLog()?.Error(e);
+                }
             }
             foreach (var registerBasics in registerBasicsList) {
                 registerBasics.getRegisterManage().put(registerBasics, false);
                 completeNameRegisterBasicsMap.Add(registerBasics.getCompleteName(), registerBasics);
             }
             foreach (var registerBasics in registerBasicsList) {
-                registerBasicsPutEvent(registerBasics);
+                try {
+                    registerBasicsPutEvent(registerBasics);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerBasicsPutEvent时发生错误,registerBasics:{registerBasics}");
+                    getLog()?.Error(e);
+                }
             }
             foreach (var registerBasics in registerBasicsList) {
-                registerBasicsInitEvent(registerBasics);
+                try {
+                    registerBasicsInitEvent(registerBasics);
+                }
+                catch (Exception e) {
+                    getLog()?.Error($"registerBasicsInitEvent时发生错误,registerBasics:{registerBasics}");
+                    getLog()?.Error(e);
+                }
             }
             foreach (var registerBasics in registerBasicsList) {
                 /*foreach (var keyValuePair in registerBasics.getAdditionalRegister()) {

@@ -91,7 +91,6 @@ namespace RegisterSystem {
             }
             basicsRegisterManage?.put(register, true);
             registerMap.Add(register.getName(), register);
-            registerList.Add(register);
         }
 
         /// <summary>
@@ -166,8 +165,20 @@ namespace RegisterSystem {
         /// <returns></returns>
         public virtual IEnumerable<T> forAll() {
             if (!isInitEnd) {
-               
+                return _forAll();
+                IEnumerable<T> _forAll() {
+                    foreach (var registerMapValue in registerMap.Values) {
+                        yield return (T)registerMapValue;
+                    }
+                }
             }
+            if (registerGenericityList is null) {
+                registerGenericityList = new List<T>(registerMap.Count);
+                foreach (var registerMapValue in registerMap.Values) {
+                    registerGenericityList.Add((T)registerMapValue);
+                }
+            }
+            return registerGenericityList;
         }
     }
 }
