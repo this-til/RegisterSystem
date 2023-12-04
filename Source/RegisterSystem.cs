@@ -595,7 +595,7 @@ namespace RegisterSystem {
         public void voluntarilyAssignment(object obj) {
             BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic;
             bindingFlags |= obj is Type ? BindingFlags.Static : BindingFlags.Instance;
-            foreach (var fieldInfo in obj.GetType().GetFields(bindingFlags)) {
+            foreach (var fieldInfo in (obj as Type ?? obj.GetType()).GetFields(bindingFlags)) {
                 if (!Util.isEffective(fieldInfo)) {
                     continue;
                 }

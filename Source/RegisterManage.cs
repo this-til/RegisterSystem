@@ -104,6 +104,23 @@ namespace RegisterSystem {
         }
 
         /// <summary>
+        /// 通过索引获取注册项
+        /// </summary>
+        public virtual RegisterBasics? getAt_erase(int index) {
+            if (basicsRegisterManage is not null) {
+                registerSystem.getLog()?.Error($"{this}不支持通过索引获取注册项");
+            }
+            if (!isInitEnd) {
+                return null;
+            }
+            registerList ??= new List<RegisterBasics>(registerMap.Values);
+            if (index < 0 || index >= registerList.Count) {
+                return null;
+            }
+            return registerList[index];
+        }
+
+        /// <summary>
         /// 输出所有的注册项
         /// </summary>
         public IEnumerable<RegisterBasics> forAll_erase() {
@@ -159,6 +176,10 @@ namespace RegisterSystem {
             return get_erase(key) as T;
         }
 
+        public virtual T? getAt(int index) {
+            return getAt_erase(index) as T;
+        }
+
         /// <summary>
         /// 遍历所有的注册项
         /// </summary>
@@ -166,6 +187,7 @@ namespace RegisterSystem {
         public virtual IEnumerable<T> forAll() {
             if (!isInitEnd) {
                 return _forAll();
+
                 IEnumerable<T> _forAll() {
                     foreach (var registerMapValue in registerMap.Values) {
                         yield return (T)registerMapValue;

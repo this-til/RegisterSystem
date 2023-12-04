@@ -46,7 +46,7 @@ namespace RegisterSystem {
         public void awakeInitFieldRegister() {
             foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
                 RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
-                if (registerBasics is null) {
+                if (registerBasics is null && keyValuePair.Value.automaticCreate) {
                     Type type = keyValuePair.Value.registerType ?? keyValuePair.Key.FieldType;
                     registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new Exception();
                     keyValuePair.Key.SetValue(this, registerBasics);
@@ -58,14 +58,6 @@ namespace RegisterSystem {
         /// 最早的初始化方法
         /// </summary>
         public virtual void awakeInit() {
-            foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
-                RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
-                if (registerBasics is null) {
-                    Type type = keyValuePair.Value.registerType ?? keyValuePair.Key.FieldType;
-                    registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new Exception();
-                    keyValuePair.Key.SetValue(this, registerBasics);
-                }
-            }
         }
 
         /// <summary>
@@ -85,14 +77,17 @@ namespace RegisterSystem {
         /// </summary>
         public virtual IEnumerable<RegisterBasicsMetadata> getAdditionalRegister() {
             foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
-                RegisterBasics registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics ?? throw new Exception();
+                RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
+                if (registerBasics is null) {
+                    continue;
+                }
                 string _name = keyValuePair.Key.Name;
                 if (!string.IsNullOrEmpty(keyValuePair.Value.customName)) {
                     _name = keyValuePair.Value.customName;
                 }
                 yield return new RegisterBasicsMetadata() {
                     registerBasics = registerBasics,
-                    name = $"{name}/{_name}",
+                    name = $"{name}${_name}",
                     registerManageType = keyValuePair.Value.registerManageType,
                     priority = keyValuePair.Value.priority
                 };
