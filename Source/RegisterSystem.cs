@@ -298,6 +298,7 @@ namespace RegisterSystem {
                     });
                 }
 
+                int priorityOffset = 0;
                 foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public)) {
                     if (!Util.isEffective(fieldInfo)) {
                         continue;
@@ -328,20 +329,20 @@ namespace RegisterSystem {
                         getLog()?.Error($"创建注册项的时候出错,类型为抽象的 name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
                         continue;
                     }
-
                     RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
                     fieldInfo.SetValue(null, registerBasics);
                     registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
                         registerBasics = registerBasics,
                         name = name,
-                        priority = fieldRegisterAttribute?.priority ?? 0,
+                        priority = (fieldRegisterAttribute?.priority ?? 0) + priorityOffset,
                         registerManage = keyValuePair.Value
                     });
+                    priorityOffset++;
                 }
             }
 
             //添加自动注册选项
-            foreach (var type in allVoluntarilyRegisterAssetMap.Keys.ToArray()) {
+            foreach (var type in allVoluntarilyRegisterAssetMap.Keys) {
                 VoluntarilyRegisterAttribute voluntarilyRegisterAttribute = type.GetCustomAttribute<VoluntarilyRegisterAttribute>() ?? throw new NullReferenceException();
                 RegisterBasics registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new NullReferenceException();
                 allVoluntarilyRegisterAssetMap[type] = registerBasics;
