@@ -76,7 +76,6 @@ namespace RegisterSystem {
         /// 获取附加的注册项目
         /// </summary>
         public virtual IEnumerable<RegisterBasicsMetadata> getAdditionalRegister() {
-            int priorityOffset = 0;
             foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
                 RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
                 if (registerBasics is null) {
@@ -90,9 +89,8 @@ namespace RegisterSystem {
                     registerBasics = registerBasics,
                     name = $"{name}${_name}",
                     registerManageType = keyValuePair.Value.registerManageType,
-                    priority = keyValuePair.Value.priority + priorityOffset
+                    priority = keyValuePair.Value.priority
                 };
-                priorityOffset++;
             }
         }
 

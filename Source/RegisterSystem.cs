@@ -298,7 +298,6 @@ namespace RegisterSystem {
                     });
                 }
 
-                int priorityOffset = 0;
                 foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public)) {
                     if (!Util.isEffective(fieldInfo)) {
                         continue;
@@ -334,10 +333,9 @@ namespace RegisterSystem {
                     registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
                         registerBasics = registerBasics,
                         name = name,
-                        priority = (fieldRegisterAttribute?.priority ?? 0) + priorityOffset,
+                        priority = (fieldRegisterAttribute?.priority ?? 0),
                         registerManage = keyValuePair.Value
                     });
-                    priorityOffset++;
                 }
             }
 
@@ -437,8 +435,29 @@ namespace RegisterSystem {
                     index--;
                 }
             }
-            registerBasicsList.Sort((a, b) => a.getRegisterManage().getPriority().CompareTo(b.getRegisterManage().getPriority()));
-            registerBasicsList.Sort((a, b) => a.getPriority().CompareTo(b.getPriority()));
+
+            Dictionary<RegisterManage, List<RegisterBasics>> dictionary = new Dictionary<RegisterManage, List<RegisterBasics>>();
+            foreach (var registerBasics in registerBasicsList) {
+                List<RegisterBasics> list;
+                if (dictionary.ContainsKey(registerBasics.registerManage)) {
+                    list = dictionary[registerBasics.registerManage];
+                }
+                else {
+                    list = new List<RegisterBasics>();
+                    dictionary.Add(registerBasics.registerManage, list);
+                }
+                list.Add(registerBasics);
+            }
+            foreach (var dictionaryValue in dictionary.Values) {
+                dictionaryValue.Sort((a, b) => b.getPriority().CompareTo(a.getPriority()));
+            }
+            List<RegisterManage> registerManageList = new List<RegisterManage>(dictionary.Keys);
+            registerManageList.Sort((a, b) => b.getPriority().CompareTo(a.getPriority()));
+            registerBasicsList = new List<RegisterBasics>(registerBasicsList.Count);
+            foreach (var registerManage in registerManageList) {
+                registerBasicsList.AddRange(dictionary[registerManage]);
+            }
+
             foreach (var registerBasics in registerBasicsList) {
                 try {
                     registerBasicsAwakeInitEvent(registerBasics);
