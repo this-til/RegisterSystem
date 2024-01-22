@@ -123,7 +123,7 @@ namespace RegisterSystem {
         /// <summary>
         /// 输出所有的注册项
         /// </summary>
-        public IEnumerable<RegisterBasics> forAll_erase() {
+        public virtual IEnumerable<RegisterBasics> forAll_erase() {
             if (!isInitEnd) {
                 return registerMap.Values;
             }

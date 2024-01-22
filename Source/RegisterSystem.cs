@@ -436,26 +436,32 @@ namespace RegisterSystem {
                 }
             }
 
-            Dictionary<RegisterManage, List<RegisterBasics>> dictionary = new Dictionary<RegisterManage, List<RegisterBasics>>();
+            ReverseComparer<int> comparer = new ReverseComparer<int>();
+            SortedDictionary<int, SortedDictionary<int, List<RegisterBasics>>> dictionary = new SortedDictionary<int, SortedDictionary<int, List<RegisterBasics>>>(comparer);
             foreach (var registerBasics in registerBasicsList) {
+                SortedDictionary<int, List<RegisterBasics>> sortedDictionary;
+                if (dictionary.ContainsKey(registerBasics.registerManage.getPriority())) {
+                    sortedDictionary = dictionary[registerBasics.registerManage.getPriority()];
+                }
+                else {
+                    sortedDictionary = new SortedDictionary<int, List<RegisterBasics>>(comparer);
+                    dictionary.Add(registerBasics.registerManage.getPriority(), sortedDictionary);
+                }
                 List<RegisterBasics> list;
-                if (dictionary.ContainsKey(registerBasics.registerManage)) {
-                    list = dictionary[registerBasics.registerManage];
+                if (sortedDictionary.ContainsKey(registerBasics.getPriority())) {
+                    list = sortedDictionary[registerBasics.getPriority()];
                 }
                 else {
                     list = new List<RegisterBasics>();
-                    dictionary.Add(registerBasics.registerManage, list);
+                    sortedDictionary.Add(registerBasics.getPriority(), list);
                 }
                 list.Add(registerBasics);
             }
-            foreach (var dictionaryValue in dictionary.Values) {
-                dictionaryValue.Sort((a, b) => b.getPriority().CompareTo(a.getPriority()));
-            }
-            List<RegisterManage> registerManageList = new List<RegisterManage>(dictionary.Keys);
-            registerManageList.Sort((a, b) => b.getPriority().CompareTo(a.getPriority()));
             registerBasicsList = new List<RegisterBasics>(registerBasicsList.Count);
-            foreach (var registerManage in registerManageList) {
-                registerBasicsList.AddRange(dictionary[registerManage]);
+            foreach (var keyValuePair in dictionary) {
+                foreach (var valuePair in keyValuePair.Value) {
+                    registerBasicsList.AddRange(valuePair.Value);
+                }
             }
 
             foreach (var registerBasics in registerBasicsList) {

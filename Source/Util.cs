@@ -26,7 +26,7 @@ namespace RegisterSystem {
         }
 
         public static String ofPath(Type type) {
-            StringBuilder stringBuilder = new StringBuilder();
+            /*StringBuilder stringBuilder = new StringBuilder();
             String className = type.Name;
 
             String[] cell = className.Split("_");
@@ -55,7 +55,8 @@ namespace RegisterSystem {
                     stringBuilder.Append(c);
                 }
             }
-            return stringBuilder.ToString();
+            return stringBuilder.ToString();*/
+            return type.Name;
         }
 
         public static String ofCompleteName(RegisterManage registerManage) {
@@ -77,6 +78,12 @@ namespace RegisterSystem {
                 c = (char)(c + 32);
             }
             return c;
+        }
+    }
+
+    public class ReverseComparer<T> : IComparer<T> where T : IComparable<T> {
+        public int Compare(T? x, T? y) {
+            return y?.CompareTo(x) ?? 0;
         }
     }
 
