@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegisterManage", "RegisterManage.csproj", "{7A7C7A12-6674-4F5A-9522-1BC3BA70A3C9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegisterSystem", "RegisterSystem.csproj", "{7A7C7A12-6674-4F5A-9522-1BC3BA70A3C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
