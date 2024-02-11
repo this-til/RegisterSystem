@@ -4,7 +4,7 @@ namespace RegisterSystem {
     /// <summary>
     /// 给RegisterManage提供默认注册项的一些元数据
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Field |  AttributeTargets.Property)]
     public class FieldRegisterAttribute : Attribute {
         /// <summary>
         /// 优先级
