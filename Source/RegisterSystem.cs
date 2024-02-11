@@ -270,7 +270,7 @@ namespace RegisterSystem {
                     FieldRegisterAttribute? fieldRegisterAttribute = propertyInfo.GetCustomAttribute<FieldRegisterAttribute>();
 
                     string name = propertyInfo.Name;
-                    if (fieldRegisterAttribute is not null && string.IsNullOrEmpty(fieldRegisterAttribute.customName)) {
+                    if (fieldRegisterAttribute is not null && !string.IsNullOrEmpty(fieldRegisterAttribute.customName)) {
                         name = fieldRegisterAttribute.customName;
                     }
 
