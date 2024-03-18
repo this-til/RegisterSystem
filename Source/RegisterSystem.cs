@@ -36,6 +36,11 @@ namespace RegisterSystem {
         /// </summary>
         protected readonly Dictionary<string, RegisterBasics> completeNameRegisterBasicsMap = new Dictionary<string, RegisterBasics>();
 
+        /// <summary>
+        /// 所有tag的查询表
+        /// </summary>
+        protected readonly Dictionary<string, Tag> tagMap = new Dictionary<string, Tag>();
+
         protected readonly List<Type> allType = new List<Type>();
 
         /// <summary>
@@ -70,7 +75,15 @@ namespace RegisterSystem {
 
         protected event Action<RegisterBasics> registerBasicsInitEndEvent;
 
-        public bool isInit() => init;
+        protected event Action<Tag> tagPutEvent;
+        protected event Action<Tag> tagInitEndEvent;
+
+        public bool isInit() {
+            if (init) {
+                log?.Error("RegisterSystem已经初始化了，所以拒绝了一些操作");
+            }
+            return init;
+        }
 
         public RegisterSystem() {
             log = LogManager.GetLogger(GetType());
@@ -85,56 +98,84 @@ namespace RegisterSystem {
             initAddRegisterBasicsPutEvent(voluntarilyAssignment);
             initAddRegisterBasicsInitEndEvent(r => r._initEnd = true);
             initAddRegisterBasicsInitEndEvent(r => r.initEnd());
-        }
-
-        protected void initTest() {
-            if (isInit()) {
-                throw new Exception("RegisterSystem已经初始化了");
-            }
+            initAddTagPutEvent(voluntarilyAssignment);
+            initAddTagInitEndEvent(r => r._isInitEnd = true);
         }
 
         public void initAddRegisterManageAwakeInitEvent(Action<RegisterManage> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerManageAwakeInitEvent += action;
         }
 
         public void initAddRegisterManageInitEvent(Action<RegisterManage> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerManageInitEvent += action;
         }
 
         public void initAddRegisterManageInitSecondEvent(Action<RegisterManage> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerManageInitSecondEvent += action;
         }
 
         public void initAddRegisterManagePutEndEvent(Action<RegisterManage> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerManagePutEndEvent += action;
         }
 
         public void initAddRegisterBasicsAwakeInitEvent(Action<RegisterBasics> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerBasicsAwakeInitEvent += action;
         }
 
         public void initAddRegisterBasicsInitEvent(Action<RegisterBasics> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerBasicsInitEvent += action;
         }
 
         public void initAddRegisterBasicsPutEvent(Action<RegisterBasics> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerBasicsPutEvent += action;
         }
 
         public void initAddRegisterBasicsInitEndEvent(Action<RegisterBasics> action) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             registerBasicsInitEndEvent += action;
         }
 
+        public void initAddTagPutEvent(Action<Tag> action) {
+            if (isInit()) {
+                return;
+            }
+            tagPutEvent += action;
+        }
+
+        public void initAddTagInitEndEvent(Action<Tag> action) {
+            if (isInit()) {
+                return;
+            }
+            tagInitEndEvent += action;
+        }
+
         public void initAddAllManagedAssembly(params Assembly[]? assemblies) {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             if (assemblies is null) {
                 return;
             }
@@ -144,7 +185,9 @@ namespace RegisterSystem {
         }
 
         public void initRegisterSystem() {
-            initTest();
+            if (isInit()) {
+                return;
+            }
             init = true;
 
             //从程序集中获取所有的类型
@@ -445,7 +488,7 @@ namespace RegisterSystem {
                     log?.Error($"{registerManage}进行{nameof(registerManagePutEndEvent)}时发生错误", e);
                 }
             }
-            log?.Info($"完成`{nameof(registerManagePutEndEvent)}回调");
+            log?.Info($"完成{nameof(registerManagePutEndEvent)}回调");
 
             log?.Info($"开始{nameof(registerBasicsInitEndEvent)}回调");
             foreach (var registerManage in classRegisterManageMap.Values) {
@@ -459,6 +502,17 @@ namespace RegisterSystem {
                 }
             }
             log?.Info($"完成{nameof(registerBasicsInitEndEvent)}回调");
+
+            log?.Info($"开始{nameof(tagInitEndEvent)}回调");
+            foreach (var tag in tagMap.Values) {
+                try {
+                    tagInitEndEvent?.Invoke(tag);
+                }
+                catch (Exception e) {
+                    log?.Error($"{tag}进行{nameof(tagInitEndEvent)}时发生错误", e);
+                }
+            }
+            log?.Info($"完成{nameof(tagInitEndEvent)}回调");
         }
 
         /// <summary>
@@ -573,8 +627,22 @@ namespace RegisterSystem {
             }
             foreach (var tag in tags) {
                 tag.registerManage.put(tag);
-                log?.Info($"{tag}注册完成");
+                tagMap.Add(tag.completeName, tag);
             }
+
+            log?.Info($"开始{nameof(tagPutEvent)}回调");
+
+            foreach (var tag in tags) {
+                try {
+                    tagPutEvent?.Invoke(tag);
+                }
+                catch (Exception e) {
+                    log?.Error($"{tag}进行{nameof(tagPutEvent)}时发生错误", e);
+                }
+            }
+
+            log?.Info($"完成{nameof(tagPutEvent)}回调");
+
             log?.Info($"完成进行统一注册tag：{string.Join(',', tags)}");
         }
 

@@ -4,10 +4,10 @@ using log4net;
 
 namespace RegisterSystem {
     public abstract class Tag {
-        protected string _name;
+        protected string _name = String.Empty;
         [IgnoreRegister] protected RegisterManage _registerManage;
         protected internal RegisterSystem _registerSystem;
-        protected bool _isInitEnd;
+        protected internal bool _isInitEnd;
 
         /// <summary>
         /// 注册项的完整的名称
@@ -58,7 +58,12 @@ namespace RegisterSystem {
 
         public override void addRegisterItem(RegisterBasics registerBasics) => _has.Add((R)registerBasics);
 
-        public override bool hasRegisterItem(RegisterBasics registerBasics) => _has.Contains(registerBasics as R);
+        public override bool hasRegisterItem(RegisterBasics registerBasics) {
+            if (registerBasics is not R r) {
+                return false;
+            }
+            return _has.Contains(r);
+        }
 
         public bool hasRegisterItem(R registerBasics) => _has.Contains(registerBasics);
 
