@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
+using log4net;
 
 namespace RegisterSystem {
     public class Util {
@@ -59,7 +59,7 @@ namespace RegisterSystem {
             return type.Name;
         }
 
-        public static String ofCompleteName(RegisterManage registerManage) {
+        /*public static String ofCompleteName(RegisterManage registerManage) {
             if (registerManage.getBasicsRegisterManage() is null) {
                 return registerManage.getName();
             }
@@ -71,7 +71,7 @@ namespace RegisterSystem {
             }
             list.Reverse();
             return string.Join('/', list);
-        }
+        }*/
 
         public static char upperToLower(char c) {
             if (c > 64 && c < 91) {
@@ -79,19 +79,24 @@ namespace RegisterSystem {
             }
             return c;
         }
+
+        public static readonly Dictionary<Type, ILog> logMap = new Dictionary<Type, ILog>();
+
+        public static ILog getLog(Type type) {
+            if (logMap.ContainsKey(type)) {
+                return logMap[type];
+            }
+            ILog log = LogManager.GetLogger(type);
+            logMap.Add(type, log);
+            return log;
+        }
+
+        public static ILog getLog<T>() => getLog(typeof(T));
     }
 
     public class ReverseComparer<T> : IComparer<T> where T : IComparable<T> {
         public int Compare(T? x, T? y) {
             return y?.CompareTo(x) ?? 0;
         }
-    }
-
-    public class RegisterBasicsMetadata {
-        public RegisterBasics registerBasics;
-        public string name;
-        public RegisterManage? registerManage;
-        public Type? registerManageType;
-        public int priority;
     }
 }

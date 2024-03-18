@@ -10,26 +10,11 @@ namespace RegisterSystem {
         /// 优先级
         /// </summary>
         public int priority;
-
-        /// <summary>
-        /// 自定义的名称
-        /// </summary>
-        public string customName = String.Empty;
-
-        /// <summary>
-        /// 注册项的类型
-        /// </summary>
-        public Type? registerType;
-
+        
         /// <summary>
         /// 给定一个类型，指向要注册进的管理器
         /// </summary>
         public Type? registerManageType;
-
-        /// <summary>
-        /// 自动创建
-        /// </summary>
-        public bool automaticCreate = true;
     }
 
     /// <summary>

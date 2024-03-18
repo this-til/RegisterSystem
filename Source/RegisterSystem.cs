@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using log4net;
 
 namespace RegisterSystem {
     public class RegisterSystem {
@@ -22,9 +23,8 @@ namespace RegisterSystem {
 
         /// <summary>
         /// 根据<see cref="RegisterManage.name"/>的映射表
-        /// 这里不使用全名称只是因为类管理器的全名称只是给人看的
         /// </summary>
-        protected readonly Dictionary<String, RegisterManage> nameRegisterManageMap = new Dictionary<string, RegisterManage>();
+        protected readonly Dictionary<string, RegisterManage> nameRegisterManageMap = new Dictionary<string, RegisterManage>();
 
         /// <summary>
         /// 标记有<see cref="VoluntarilyRegisterAttribute"/>属性的注册项类型的映射表
@@ -38,26 +38,12 @@ namespace RegisterSystem {
 
         protected readonly List<Type> allType = new List<Type>();
 
-        //protected static readonly BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        //protected readonly FieldInfo registerManage_registerSystem = typeof(RegisterManage).GetField("registerSystem", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerManage_name = typeof(RegisterManage).GetField("name", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerManage_completeName = typeof(RegisterManage).GetField("completeName", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerManage_basicsRegisterManage = typeof(RegisterManage).GetField("basicsRegisterManage", bindingFlags) ?? throw new Exception();
-
-        //protected readonly FieldInfo registerBasics_registerManage = typeof(RegisterBasics).GetField("registerManage", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerBasics_name = typeof(RegisterBasics).GetField("name", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerBasics_completeName = typeof(RegisterBasics).GetField("completeName", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerBasics_registerSystem = typeof(RegisterBasics).GetField("registerSystem", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerBasics_priority = typeof(RegisterBasics).GetField("priority", bindingFlags) ?? throw new Exception();
-        //protected readonly FieldInfo registerBasics_isInit = typeof(RegisterBasics).GetField("_isInit", bindingFlags) ?? throw new Exception();
-
         /// <summary>
-        /// 一个标志，
-        /// 声明如果初始化了将禁用一些方法
+        /// 声明如果初始化了将禁用一些方法  
         /// </summary>
-        protected bool _isInit;
+        protected bool init;
 
-        protected ILogOut? log;
+        protected ILog? log;
 
         /// <summary>
         /// 在类型管理被创建完成后的一个回调事件
@@ -84,23 +70,20 @@ namespace RegisterSystem {
 
         protected event Action<RegisterBasics> registerBasicsInitEndEvent;
 
-        public bool isInit() => _isInit;
+        public bool isInit() => init;
 
         public RegisterSystem() {
+            log = LogManager.GetLogger(GetType());
             initAddRegisterManageAwakeInitEvent(r => r.awakeInit());
-            initAddRegisterManageAwakeInitEvent(r => getLog()?.Info($"完成构建类型管理器{r}"));
-            initAddRegisterManageAwakeInitEvent(r => nameRegisterManageMap.Add(r.getName(), r));
             initAddRegisterManageInitEvent(r => r.init());
             initAddRegisterManageInitSecondEvent(r => r.initSecond());
             initAddRegisterManagePutEndEvent(voluntarilyAssignment);
-            initAddRegisterManagePutEndEvent(r => r.isInitEnd = true);
+            initAddRegisterManagePutEndEvent(r => r._initEnd = true);
             initAddRegisterManagePutEndEvent(r => r.initEnd());
-            initAddRegisterBasicsAwakeInitEvent(r => r.awakeInitFieldRegister());
             initAddRegisterBasicsAwakeInitEvent(r => r.awakeInit());
             initAddRegisterBasicsInitEvent(r => r.init());
-            initAddRegisterBasicsPutEvent(r => getLog()?.Info($"已经将{r}注册进系统"));
             initAddRegisterBasicsPutEvent(voluntarilyAssignment);
-            initAddRegisterBasicsInitEndEvent(r => r.isInitEnd = true);
+            initAddRegisterBasicsInitEndEvent(r => r._initEnd = true);
             initAddRegisterBasicsInitEndEvent(r => r.initEnd());
         }
 
@@ -108,11 +91,6 @@ namespace RegisterSystem {
             if (isInit()) {
                 throw new Exception("RegisterSystem已经初始化了");
             }
-        }
-
-        public void initLog(ILogOut _log) {
-            initTest();
-            this.log = _log;
         }
 
         public void initAddRegisterManageAwakeInitEvent(Action<RegisterManage> action) {
@@ -167,7 +145,7 @@ namespace RegisterSystem {
 
         public void initRegisterSystem() {
             initTest();
-            _isInit = true;
+            init = true;
 
             //从程序集中获取所有的类型
             foreach (var assembly in allManagedAssembly) {
@@ -192,13 +170,38 @@ namespace RegisterSystem {
                 }
             }
 
+            log?.Info("开始RegisterManage的实例化");
+
             //创建类型管理器
             foreach (var type in classRegisterManageMap.Keys.ToArray()) {
-                RegisterManage registerManage = Activator.CreateInstance(type) as RegisterManage ?? throw new Exception();
-                registerManage.registerSystem = this;
-                registerManage.name = registerManage.GetType().Name;
-                classRegisterManageMap[type] = registerManage;
+                try {
+                    RegisterManage registerManage = (RegisterManage)Activator.CreateInstance(type);
+                    registerManage._registerSystem = this;
+                    registerManage.name = registerManage.GetType().Name;
+                    classRegisterManageMap[type] = registerManage;
+
+                    while (true) {
+                        if (nameRegisterManageMap.ContainsKey(registerManage.name)) {
+                            log?.Warn($"{registerManage}的名称冲突，已更新为:{registerManage.name}_");
+                            registerManage.name += "_";
+                            continue;
+                        }
+                        break;
+                    }
+
+                    nameRegisterManageMap.Add(registerManage.name, registerManage);
+
+                    log?.Info($"完成{type}的实例化");
+                }
+                catch (Exception e) {
+                    log?.Error($"{type}的实例化出现错误", e);
+                    classRegisterManageMap.Remove(type);
+                }
             }
+
+            log?.Info($"完成RegisterManage的实例化，统计：{string.Join(',', classRegisterManageMap.Values)}");
+
+            log?.Info("开始RegisterManage的关系绑定");
 
             //对类型管理器进行映射，并且排除冲突
             foreach (var registerManage in classRegisterManageMap.Values) {
@@ -213,7 +216,7 @@ namespace RegisterSystem {
                         conflict |= !basicsRegisterManage.getRegisterType().GetGenericTypeDefinition().IsAssignableFrom(registerType.GetGenericTypeDefinition());
                     }
                     if (conflict) {
-                        throw new Exception($"注册管理者父类型错误," +
+                        throw new Exception("注册管理者父类型错误," +
                                             $"RegisterManage:{registerManage}" +
                                             $"BasicsRegisterManage:{basicsRegisterManage}");
                     }
@@ -239,183 +242,223 @@ namespace RegisterSystem {
                 }
             }
 
-            //对类型管理器赋值名称
-            foreach (var registerManage in classRegisterManageMap.Values) {
-                registerManage.completeName = Util.ofCompleteName(registerManage);
-            }
+            log?.Info("完成RegisterManage的关系绑定");
 
+            log?.Info($"开始{nameof(registerManageAwakeInitEvent)}的事件回调");
             //回调
             foreach (var registerManage in classRegisterManageMap.Values) {
                 try {
                     registerManageAwakeInitEvent(registerManage);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerManageAwakeInitEvent时发生错误,RegisterManage:{registerManage}");
-                    getLog()?.Error(e);
+                    log?.Error($"RegisterManage:{registerManage}在registerManageAwakeInitEvent时发生错误", e);
                 }
             }
+            log?.Info($"完成{nameof(registerManageAwakeInitEvent)}的事件回调");
 
-            List<RegisterBasicsMetadata> registerBasicsMetadata = new List<RegisterBasicsMetadata>();
+            List<RegisterBasics> registerBasicsList = new List<RegisterBasics>();
+            List<Tag> tagList = new List<Tag>();
 
-            //直接通过定义的静态字段获取注册项
+            log?.Info("开始从registerManage静态字段中获取注册项和Tag");
+            List<RegisterBasics> nextAdd = new List<RegisterBasics>();
+            List<Tag> nextAddTag = new List<Tag>();
+
             foreach (var keyValuePair in classRegisterManageMap) {
                 foreach (var propertyInfo in keyValuePair.Key.GetProperties(BindingFlags.Static | BindingFlags.Public)) {
-                    if (!Util.isEffective(propertyInfo)) {
-                        continue;
-                    }
-                    if (!typeof(RegisterBasics).IsAssignableFrom(propertyInfo.PropertyType)) {
-                        continue;
-                    }
-
-                    FieldRegisterAttribute? fieldRegisterAttribute = propertyInfo.GetCustomAttribute<FieldRegisterAttribute>();
-
-                    string name = propertyInfo.Name;
-                    if (fieldRegisterAttribute is not null && !string.IsNullOrEmpty(fieldRegisterAttribute.customName)) {
-                        name = fieldRegisterAttribute.customName;
-                    }
-
-                    Type registerType = propertyInfo.PropertyType;
-                    if (fieldRegisterAttribute is not null && fieldRegisterAttribute.registerType is not null) {
-                        registerType = fieldRegisterAttribute.registerType;
-                        if (!propertyInfo.PropertyType.IsAssignableFrom(registerType)) {
-                            getLog()?.Error($"创建注册项的时候出错,类型不继承{typeof(RegisterBasics)} name:{name},PropertyInfo:{propertyInfo},type:{registerType.AssemblyQualifiedName}");
-                            continue;
-                        }
-                    }
-
-                    if (registerType.IsAbstract) {
-                        getLog()?.Error($"创建注册项的时候出错,类型为抽象的 name:{name},PropertyInfo:{propertyInfo},type:{registerType.AssemblyQualifiedName}");
-                        continue;
-                    }
-
-                    RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
-                    propertyInfo.SetValue(null, registerBasics);
-                    registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
-                        registerBasics = registerBasics,
-                        name = name,
-                        priority = fieldRegisterAttribute?.priority ?? 0,
-                        registerManage = keyValuePair.Value
-                    });
+                    _(propertyInfo);
                 }
-
                 foreach (var fieldInfo in keyValuePair.Key.GetFields(BindingFlags.Static | BindingFlags.Public)) {
-                    if (!Util.isEffective(fieldInfo)) {
-                        continue;
-                    }
-                    if (!typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
-                        continue;
-                    }
-                    if (fieldInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>() is not null) {
-                        continue;
-                    }
-                    FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
-
-                    string name = fieldInfo.Name;
-                    if (fieldRegisterAttribute is not null && string.IsNullOrEmpty(fieldRegisterAttribute.customName)) {
-                        name = fieldRegisterAttribute.customName;
-                    }
-
-                    Type registerType = fieldInfo.FieldType;
-                    if (fieldRegisterAttribute is not null && fieldRegisterAttribute.registerType is not null) {
-                        registerType = fieldRegisterAttribute.registerType;
-                        if (!fieldInfo.FieldType.IsAssignableFrom(registerType)) {
-                            getLog()?.Error($"创建注册项的时候出错,类型不继承{typeof(RegisterBasics)} name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
-                            continue;
-                        }
-                    }
-
-                    if (registerType.IsAbstract) {
-                        getLog()?.Error($"创建注册项的时候出错,类型为抽象的 name:{name},FieldInfo:{fieldInfo},type:{registerType.AssemblyQualifiedName}");
-                        continue;
-                    }
-                    RegisterBasics registerBasics = Activator.CreateInstance(registerType) as RegisterBasics ?? throw new NullReferenceException();
-                    fieldInfo.SetValue(null, registerBasics);
-                    registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
-                        registerBasics = registerBasics,
-                        name = name,
-                        priority = (fieldRegisterAttribute?.priority ?? 0),
-                        registerManage = keyValuePair.Value
-                    });
+                    _(fieldInfo);
                 }
+
+                void _(MemberInfo memberInfo) {
+                    if (!Util.isEffective(memberInfo)) {
+                        return;
+                    }
+
+                    Type type;
+
+                    switch (memberInfo) {
+                        case PropertyInfo propertyInfo:
+                            type = propertyInfo.PropertyType;
+                            break;
+                        case FieldInfo fieldInfo:
+                            type = fieldInfo.FieldType;
+                            break;
+                        default:
+                            throw new Exception();
+                    }
+
+                    if (typeof(RegisterBasics).IsAssignableFrom(type)) {
+                        if (type.IsAbstract) {
+                            log?.Error($"字段{type}的类型是抽象的，它将会被忽视");
+                            return;
+                        }
+
+                        FieldRegisterAttribute? fieldRegisterAttribute = memberInfo.GetCustomAttribute<FieldRegisterAttribute>();
+
+                        RegisterBasics registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new NullReferenceException();
+                        registerBasics.name = memberInfo.Name;
+                        registerBasics.priority = fieldRegisterAttribute?.priority ?? 0;
+                        registerBasics.registerManage = keyValuePair.Value;
+
+                        switch (memberInfo) {
+                            case PropertyInfo propertyInfo:
+                                propertyInfo.SetValue(null, registerBasics);
+                                break;
+                            case FieldInfo fieldInfo:
+                                fieldInfo.SetValue(null, registerBasics);
+                                break;
+                            default:
+                                throw new Exception();
+                        }
+
+                        nextAdd.Add(registerBasics);
+                    }
+
+                    if (typeof(Tag).IsAssignableFrom(type)) {
+                        Tag tag = Activator.CreateInstance(type) as Tag ?? throw new NullReferenceException();
+
+                        if (!keyValuePair.Value.getRegisterType().IsAssignableFrom(tag.getRegisterBasicsType())) {
+                            log?.Error($"Tag字段{type}类型不是{keyValuePair.Value.getRegisterType()}的派生");
+                            return;
+                        }
+
+                        tag.name = memberInfo.Name;
+                        tag.registerManage = keyValuePair.Value;
+
+                        switch (memberInfo) {
+                            case PropertyInfo propertyInfo:
+
+                                propertyInfo.SetValue(null, tag);
+                                break;
+                            case FieldInfo fieldInfo:
+                                fieldInfo.SetValue(null, tag);
+                                break;
+                            default:
+                                throw new Exception();
+                        }
+
+                        nextAddTag.Add(tag);
+                    }
+                }
+
+                if (nextAdd.Count > 0) {
+                    registerBasicsList.AddRange(nextAdd);
+                    log?.Info($"从{keyValuePair.Key.Name}中获取到RegisterBasics：{string.Join(',', nextAdd)}");
+                }
+                if (nextAdd.Count > 0) {
+                    tagList.AddRange(nextAddTag);
+                    log?.Info($"从{keyValuePair.Key.Name}中获取到Tag：{string.Join(',', nextAdd)}");
+                }
+
+                nextAdd.Clear();
+                nextAddTag.Clear();
             }
 
+            log?.Info("完成从registerManage静态字段中获取注册项和Tag");
+            log?.Info("开始从自动注册中获取注册项");
             //添加自动注册选项
-            foreach (var type in allVoluntarilyRegisterAssetMap.Keys) {
+            foreach (var type in allVoluntarilyRegisterAssetMap.Keys.ToArray()) {
                 VoluntarilyRegisterAttribute voluntarilyRegisterAttribute = type.GetCustomAttribute<VoluntarilyRegisterAttribute>() ?? throw new NullReferenceException();
                 RegisterBasics registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new NullReferenceException();
+                registerBasics.name = string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName) ? type.Name : voluntarilyRegisterAttribute.customName;
+                registerBasics.priority = voluntarilyRegisterAttribute.priority;
+                registerBasics.registerManage = voluntarilyRegisterAttribute.registerManageType is null ? getRegisterManageOfRegisterType(registerBasics.GetType()) : getRegisterManageOfManageType(voluntarilyRegisterAttribute.registerManageType);
+
                 allVoluntarilyRegisterAssetMap[type] = registerBasics;
-                registerBasicsMetadata.Add(new RegisterBasicsMetadata() {
-                    registerBasics = registerBasics,
-                    name = string.IsNullOrEmpty(voluntarilyRegisterAttribute.customName) ? type.Name : voluntarilyRegisterAttribute.customName,
-                    priority = voluntarilyRegisterAttribute.priority,
-                    registerManageType = voluntarilyRegisterAttribute.registerManageType
-                });
-            }
+                registerBasicsList.Add(registerBasics);
 
+                nextAdd.Add(registerBasics);
+            }
+            log?.Info($"完成从自动注册中获取注册项，总获取到：{string.Join(',', nextAdd)}");
+            nextAdd.Clear();
+
+            log?.Info("开始从registerManage中获取动态注册项");
             //从类型管理器中获取默认注册项
-            foreach (var registerManage in classRegisterManageMap.Values) {
-                registerBasicsMetadata.AddRange(registerManage.getDefaultRegisterItem());
-            }
 
+            foreach (var registerManage in classRegisterManageMap.Values) {
+                nextAdd.AddRange(registerManage.getDefaultRegisterItem());
+                nextAddTag.AddRange(registerManage.getDefaultTag());
+                if (nextAdd.Count > 0) {
+                    registerBasicsList.AddRange(nextAdd);
+                    log?.Info($"从{registerManage.name}中获取到RegisterBasics：{string.Join(',', nextAdd)}");
+                }
+                if (nextAdd.Count > 0) {
+                    tagList.AddRange(nextAddTag);
+                    log?.Info($"从{registerManage.name}中获取到Tag：{string.Join(',', nextAdd)}");
+                }
+                nextAdd.Clear();
+                nextAddTag.Clear();
+            }
+            log?.Info("完成从registerManage中获取动态注册项");
+
+            log?.Info($"开始{nameof(registerManageInitEvent)}回调");
             foreach (var registerManage in classRegisterManageMap.Values) {
                 try {
                     registerManageInitEvent(registerManage);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerManageInitEvent时发生错误,RegisterManage:{registerManage}");
-                    getLog()?.Error(e);
+                    log?.Error($"{registerManage}进行{nameof(registerManageInitEvent)}时发生错误", e);
                 }
             }
+            log?.Info($"完成{nameof(registerManageInitEvent)}回调");
 
-            foreach (var basicsMetadata in registerBasicsMetadata) {
-                mateRegisterBasics(basicsMetadata);
-            }
-
-            unifyRegister(registerBasicsMetadata.Select(m => m.registerBasics).ToList());
+            unifyRegister(registerBasicsList);
+            unifyTag(tagList);
 
             List<RegisterBasics> secondRegisterBasicList = new List<RegisterBasics>();
+
+            log?.Info("开始从registerManage中获延时的动态注册项");
             foreach (var registerManage in classRegisterManageMap.Values) {
-                foreach (var basicsMetadata in registerManage.getSecondDefaultRegisterItem()) {
-                    mateRegisterBasics(basicsMetadata);
-                    secondRegisterBasicList.Add(basicsMetadata.registerBasics);
+                nextAdd.AddRange(registerManage.getSecondDefaultRegisterItem());
+                if (nextAdd.Count > 0) {
+                    registerBasicsList.AddRange(nextAdd);
+                    log?.Info($"从{registerManage.name}中获取到RegisterBasics：{string.Join(',', nextAdd)}");
+                }
+                nextAdd.Clear();
+            }
+            log?.Info("完成从registerManage中获延时的动态注册项");
+
+            log?.Info($"开始{nameof(registerManageInitSecondEvent)}回调");
+            foreach (var registerManage in classRegisterManageMap.Values) {
+                try {
+                    registerManageInitSecondEvent?.Invoke(registerManage);
+                }
+                catch (Exception e) {
+                    log?.Error($"{registerManage}进行{nameof(registerManageInitSecondEvent)}时发生错误", e);
                 }
             }
 
-            foreach (var registerManage in classRegisterManageMap.Values) {
-                try {
-                    registerManageInitSecondEvent(registerManage);
-                }
-                catch (Exception e) {
-                    getLog()?.Error($"registerManageInitSecondEvent时发生错误,RegisterManage:{registerManage}");
-                    getLog()?.Error(e);
-                }
-            }
+            log?.Info($"完成{nameof(registerManageInitSecondEvent)}回调");
 
             if (secondRegisterBasicList.Count > 0) {
                 unifyRegister(secondRegisterBasicList);
             }
 
+            log?.Info($"开始{nameof(registerManagePutEndEvent)}回调");
             foreach (var registerManage in classRegisterManageMap.Values) {
                 try {
-                    registerManagePutEndEvent(registerManage);
+                    registerManagePutEndEvent?.Invoke(registerManage);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerManagePutEndEvent时发生错误,RegisterManage:{registerManage}");
-                    getLog()?.Error(e);
+                    log?.Error($"{registerManage}进行{nameof(registerManagePutEndEvent)}时发生错误", e);
                 }
             }
+            log?.Info($"完成`{nameof(registerManagePutEndEvent)}回调");
 
+            log?.Info($"开始{nameof(registerBasicsInitEndEvent)}回调");
             foreach (var registerManage in classRegisterManageMap.Values) {
                 foreach (var registerBasics in registerManage.forAll_erase()) {
                     try {
-                        registerBasicsInitEndEvent(registerBasics);
+                        registerBasicsInitEndEvent?.Invoke(registerBasics);
                     }
                     catch (Exception e) {
-                        getLog()?.Error($"registerBasicsInitEndEvent时发生错误,registerBasics:{registerBasics}");
-                        getLog()?.Error(e);
+                        log?.Error($"{registerManage}进行{nameof(registerBasicsInitEndEvent)}时发生错误", e);
                     }
                 }
             }
+            log?.Info($"完成{nameof(registerBasicsInitEndEvent)}回调");
         }
 
         /// <summary>
@@ -424,13 +467,12 @@ namespace RegisterSystem {
         protected void unifyRegister(List<RegisterBasics> registerBasicsList) {
             registerBasicsList = new List<RegisterBasics>(registerBasicsList);
             List<RegisterBasics> needRegisterList = new List<RegisterBasics>();
+            log?.Info("开始进行统一注册");
             for (var index = 0; index < registerBasicsList.Count; index++) {
                 var registerBasics = registerBasicsList[index];
-                registerBasics.registerSystem = this;
-                registerBasics.completeName = $"{registerBasics.getRegisterManage().getCompleteName()}@{registerBasics.getName()}";
-                if (registerBasics.getRegisterManage() is null) {
-                    getLog()?.Error(
-                        $"注册{typeof(RegisterBasics)}时没有找到对应的{typeof(RegisterManage)},{typeof(RegisterBasics)}:{registerBasics.getName()},type:{registerBasics.GetType()}");
+                registerBasics._registerSystem = this;
+                if (registerBasics.registerManage is null) {
+                    log?.Error($"注册{registerBasics}时没有找到对应的{typeof(RegisterManage)}");
                     registerBasicsList.RemoveAt(index);
                     index--;
                 }
@@ -440,20 +482,20 @@ namespace RegisterSystem {
             SortedDictionary<int, SortedDictionary<int, List<RegisterBasics>>> dictionary = new SortedDictionary<int, SortedDictionary<int, List<RegisterBasics>>>(comparer);
             foreach (var registerBasics in registerBasicsList) {
                 SortedDictionary<int, List<RegisterBasics>> sortedDictionary;
-                if (dictionary.ContainsKey(registerBasics.registerManage.getPriority())) {
-                    sortedDictionary = dictionary[registerBasics.registerManage.getPriority()];
+                if (dictionary.ContainsKey(registerBasics.registerManage.priority)) {
+                    sortedDictionary = dictionary[registerBasics.registerManage.priority];
                 }
                 else {
                     sortedDictionary = new SortedDictionary<int, List<RegisterBasics>>(comparer);
-                    dictionary.Add(registerBasics.registerManage.getPriority(), sortedDictionary);
+                    dictionary.Add(registerBasics.registerManage.priority, sortedDictionary);
                 }
                 List<RegisterBasics> list;
-                if (sortedDictionary.ContainsKey(registerBasics.getPriority())) {
-                    list = sortedDictionary[registerBasics.getPriority()];
+                if (sortedDictionary.ContainsKey(registerBasics.priority)) {
+                    list = sortedDictionary[registerBasics.priority];
                 }
                 else {
                     list = new List<RegisterBasics>();
-                    sortedDictionary.Add(registerBasics.getPriority(), list);
+                    sortedDictionary.Add(registerBasics.priority, list);
                 }
                 list.Add(registerBasics);
             }
@@ -464,60 +506,76 @@ namespace RegisterSystem {
                 }
             }
 
+            log?.Info($"开始{nameof(registerBasicsAwakeInitEvent)}回调");
             foreach (var registerBasics in registerBasicsList) {
                 try {
-                    registerBasicsAwakeInitEvent(registerBasics);
+                    registerBasicsAwakeInitEvent?.Invoke(registerBasics);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerBasicsAwakeInitEvent时发生错误,registerBasics:{registerBasics}");
-                    getLog()?.Error(e);
+                    log?.Error($"{registerBasics}进行{nameof(registerBasicsAwakeInitEvent)}回调时发生异常", e);
                 }
             }
+            log?.Info($"完成{nameof(registerBasicsAwakeInitEvent)}回调");
+
+            log?.Info($"开始注册registerBasics");
             foreach (var registerBasics in registerBasicsList) {
-                registerBasics.getRegisterManage().put(registerBasics, false);
-                completeNameRegisterBasicsMap.Add(registerBasics.getCompleteName(), registerBasics);
+                registerBasics.registerManage.put(registerBasics, false);
+                completeNameRegisterBasicsMap.Add(registerBasics.completeName, registerBasics);
             }
+            log?.Info($"完成注册registerBasics");
+
+            log?.Info($"开始{nameof(registerBasicsPutEvent)}回调");
             foreach (var registerBasics in registerBasicsList) {
                 try {
-                    registerBasicsPutEvent(registerBasics);
+                    registerBasicsPutEvent?.Invoke(registerBasics);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerBasicsPutEvent时发生错误,registerBasics:{registerBasics}");
-                    getLog()?.Error(e);
+                    log?.Error($"{registerBasics}进行{nameof(registerBasicsPutEvent)}回调时发生异常", e);
                 }
             }
+            log?.Info($"完成{nameof(registerBasicsPutEvent)}回调");
+
+            log?.Info($"完成{nameof(registerBasicsInitEvent)}回调");
             foreach (var registerBasics in registerBasicsList) {
                 try {
-                    registerBasicsInitEvent(registerBasics);
+                    registerBasicsInitEvent?.Invoke(registerBasics);
                 }
                 catch (Exception e) {
-                    getLog()?.Error($"registerBasicsInitEvent时发生错误,registerBasics:{registerBasics}");
-                    getLog()?.Error(e);
+                    log?.Error($"{registerBasics}进行{nameof(registerBasicsInitEvent)}回调时发生异常", e);
                 }
             }
+
             foreach (var registerBasics in registerBasicsList) {
-                /*foreach (var keyValuePair in registerBasics.getAdditionalRegister()) {
-                    needRegisterList.Add(keyValuePair.Key);
-                    registerBasics_name.SetValue(keyValuePair.Key, $"{registerBasics.getName()}/{keyValuePair.Value}");
-                }*/
-                foreach (var registerBasicsMetadata in registerBasics.getAdditionalRegister()) {
-                    mateRegisterBasics(registerBasicsMetadata);
-                    needRegisterList.Add(registerBasicsMetadata.registerBasics);
+                List<RegisterBasics> basicsList = new List<RegisterBasics>(registerBasics.getAdditionalRegister());
+                if (basicsList.Count > 0) {
+                    needRegisterList.AddRange(basicsList);
+                    log.Info($"从{registerBasics}中获取到注册项：{string.Join(',', basicsList)}");
                 }
             }
+            log?.Info("完成进行统一注册");
+
             if (needRegisterList.Count > 0) {
                 unifyRegister(needRegisterList);
             }
         }
 
-        protected void mateRegisterBasics(RegisterBasicsMetadata registerBasicsMetadata) {
-            registerBasicsMetadata.registerBasics.name = registerBasicsMetadata.name;
-            registerBasicsMetadata.registerBasics.priority = registerBasicsMetadata.priority;
-            RegisterManage? registerManage = registerBasicsMetadata.registerManage ??
-                                             (registerBasicsMetadata.registerManageType is not null
-                                                 ? getRegisterManageOfManageType(registerBasicsMetadata.registerManageType)
-                                                 : getRegisterManageOfRegisterType(registerBasicsMetadata.registerBasics.GetType()));
-            registerBasicsMetadata.registerBasics.registerManage = registerManage;
+        protected void unifyTag(List<Tag> tags) {
+            tags = new List<Tag>(tags);
+            log?.Info("开始进行统一注册tag");
+            for (var index = 0; index < tags.Count; index++) {
+                var registerBasics = tags[index];
+                registerBasics._registerSystem = this;
+                if (registerBasics.registerManage is null) {
+                    log?.Error($"注册{registerBasics}时没有找到对应的{typeof(RegisterManage)}");
+                    tags.RemoveAt(index);
+                    index--;
+                }
+            }
+            foreach (var tag in tags) {
+                tag.registerManage.put(tag);
+                log?.Info($"{tag}注册完成");
+            }
+            log?.Info($"完成进行统一注册tag：{string.Join(',', tags)}");
         }
 
         public RegisterManage? getRegisterManageOfManageType(Type? registerManageClass) {
@@ -638,6 +696,6 @@ namespace RegisterSystem {
             }
         }
 
-        public ILogOut? getLog() => log;
+        public ILog? getLog() => log;
     }
 }

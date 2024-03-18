@@ -1,55 +1,96 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using log4net;
 
 namespace RegisterSystem {
     public class RegisterBasics {
+        protected string _name;
+        [IgnoreRegister] protected RegisterManage _registerManage;
+        protected int _priority;
+        protected internal RegisterSystem _registerSystem;
+        protected internal int _index;
+        protected internal bool _initEnd;
+
         /// <summary>
         /// 注册项的完整的名称
         /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected internal string completeName;
+        public string completeName => $"{registerManage.name}@{name}";
 
         /// <summary>
         /// 注册项的名称
         /// 使用此名称进行注册key
         /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected internal string name;
+        public string name {
+            get => _name;
+            set {
+                if (isInit()) {
+                    return;
+                }
+                _name = value;
+            }
+        }
 
         /// <summary>
         /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        [VoluntarilyAssignment(use = false)] protected internal RegisterManage registerManage;
+        [IgnoreRegister]
+        public RegisterManage registerManage {
+            get => _registerManage;
+            set {
+                if (isInit()) {
+                    return;
+                }
+                _registerManage = value;
+            }
+        }
 
         /// <summary>
         /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        protected internal RegisterSystem registerSystem;
+        public RegisterSystem registerSystem => _registerSystem;
 
         /// <summary>
         /// 初始化时候的优先级
         /// </summary>
-        protected internal int priority;
-
-        /// <summary>
-        /// 初始化结束了
-        /// 由<see cref="RegisterSystem"/>进行赋值
-        /// </summary>
-        protected internal bool isInitEnd;
+        public int priority {
+            get => _priority;
+            set {
+                if (isInit()) {
+                    return;
+                }
+                _priority = value;
+            }
+        }
 
         /// <summary>
         /// 在RegisterManage最顶层的索引
         /// </summary>
-        protected internal int index;
+        public int index => _index;
 
-        public void awakeInitFieldRegister() {
-            foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
-                RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
-                if (registerBasics is null && keyValuePair.Value.automaticCreate) {
-                    Type type = keyValuePair.Value.registerType ?? keyValuePair.Key.FieldType;
-                    registerBasics = Activator.CreateInstance(type) as RegisterBasics ?? throw new Exception();
-                    keyValuePair.Key.SetValue(this, registerBasics);
+        public RegisterBasics() {
+            awakeInitAdditionalRegister();
+        }
+
+        public virtual void awakeInitAdditionalRegister() {
+            foreach (var fieldInfo in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!Util.isEffective(fieldInfo)) {
+                    continue;
+                }
+                FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
+                if (fieldRegisterAttribute is null) {
+                    continue;
+                }
+                if (!typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
+                    continue;
+                }
+                RegisterBasics? registerBasics = fieldInfo.GetValue(this) as RegisterBasics;
+
+                if (registerBasics is null) {
+                    registerBasics = Activator.CreateInstance(fieldInfo.FieldType) as RegisterBasics ?? throw new Exception();
+                    fieldInfo.SetValue(this, registerBasics);
                 }
             }
         }
@@ -75,72 +116,39 @@ namespace RegisterSystem {
         /// <summary>
         /// 获取附加的注册项目
         /// </summary>
-        public virtual IEnumerable<RegisterBasicsMetadata> getAdditionalRegister() {
-            foreach (var keyValuePair in FieldRegisterCache.getCache(this.GetType())) {
-                RegisterBasics? registerBasics = keyValuePair.Key.GetValue(this) as RegisterBasics;
+        public virtual IEnumerable<RegisterBasics> getAdditionalRegister() {
+            foreach (var fieldInfo in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!Util.isEffective(fieldInfo)) {
+                    continue;
+                }
+                FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
+                if (fieldRegisterAttribute is null) {
+                    continue;
+                }
+                if (!typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
+                    continue;
+                }
+                RegisterBasics? registerBasics = fieldInfo.GetValue(this) as RegisterBasics;
+
                 if (registerBasics is null) {
                     continue;
                 }
-                string _name = keyValuePair.Key.Name;
-                if (!string.IsNullOrEmpty(keyValuePair.Value.customName)) {
-                    _name = keyValuePair.Value.customName;
-                }
-                yield return new RegisterBasicsMetadata() {
-                    registerBasics = registerBasics,
-                    name = $"{name}${_name}",
-                    registerManageType = keyValuePair.Value.registerManageType,
-                    priority = keyValuePair.Value.priority
-                };
+
+                registerBasics.name = $"{name}${_name}";
+                registerBasics.priority = fieldRegisterAttribute.priority;
+                registerBasics.registerManage = fieldRegisterAttribute.registerManageType is not null ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType) : registerSystem.getRegisterManageOfRegisterType(registerBasics.GetType());
+
+                yield return registerBasics;
             }
         }
 
-        public string getCompleteName() => completeName;
-
-        public string getName() => name;
-
-        public RegisterManage getRegisterManage() => registerManage;
-
-        public RegisterSystem getRegisterSystem() => registerSystem;
-
-        public int getPriority() => priority;
-
-        protected void initTest() {
-            if (isInitEnd) {
-                throw new Exception("RegisterManage已经初始化了,拒绝一些操作");
+        protected bool isInit() {
+            if (_initEnd) {
+                Util.getLog(GetType()).Error("RegisterManage已经初始化了,拒绝一些操作");
             }
+            return _initEnd;
         }
 
-        public int getIndex() => index;
-
-        public override string ToString() {
-            return completeName;
-        }
-
-        protected class FieldRegisterCache {
-            protected static Dictionary<Type, List<KeyValuePair<FieldInfo, FieldRegisterAttribute>>> cache
-                = new Dictionary<Type, List<KeyValuePair<FieldInfo, FieldRegisterAttribute>>>();
-
-            public static List<KeyValuePair<FieldInfo, FieldRegisterAttribute>> getCache(Type type) {
-                if (cache.ContainsKey(type)) {
-                    return cache[type];
-                }
-                List<KeyValuePair<FieldInfo, FieldRegisterAttribute>> fieldInfos = new List<KeyValuePair<FieldInfo, FieldRegisterAttribute>>();
-                foreach (var fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-                    if (!Util.isEffective(fieldInfo)) {
-                        continue;
-                    }
-                    FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
-                    if (fieldRegisterAttribute is null) {
-                        continue;
-                    }
-                    if (!typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
-                        continue;
-                    }
-                    fieldInfos.Add(new KeyValuePair<FieldInfo, FieldRegisterAttribute>(fieldInfo, fieldRegisterAttribute));
-                }
-                cache.Add(type, fieldInfos);
-                return fieldInfos;
-            }
-        }
+        public override string ToString() => completeName;
     }
 }
