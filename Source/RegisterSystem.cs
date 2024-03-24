@@ -265,7 +265,7 @@ namespace RegisterSystem {
                     }
                 }
 
-                registerManage.basicsRegisterManage = basicsRegisterManage;
+                registerManage._basicsRegisterManage = basicsRegisterManage;
 
                 if (!registerManageMap.ContainsKey(registerType)) {
                     registerManageMap.Add(registerType, registerManage);
@@ -515,12 +515,10 @@ namespace RegisterSystem {
             log?.Info($"完成{nameof(tagInitEndEvent)}回调");
         }
 
-        /// <summary>
-        /// 统一注册
-        /// </summary>
         protected void unifyRegister(List<RegisterBasics> registerBasicsList) {
             registerBasicsList = new List<RegisterBasics>(registerBasicsList);
             List<RegisterBasics> needRegisterList = new List<RegisterBasics>();
+            List<Tag> needRegisterTag = new List<Tag>();
             log?.Info("开始进行统一注册");
             for (var index = 0; index < registerBasicsList.Count; index++) {
                 var registerBasics = registerBasicsList[index];
@@ -599,11 +597,19 @@ namespace RegisterSystem {
                 }
             }
 
+            List<RegisterBasics> cache = new List<RegisterBasics>();
+            List<Tag> cacheTag = new List<Tag>();
             foreach (var registerBasics in registerBasicsList) {
-                List<RegisterBasics> basicsList = new List<RegisterBasics>(registerBasics.getAdditionalRegister());
-                if (basicsList.Count > 0) {
-                    needRegisterList.AddRange(basicsList);
-                    log.Info($"从{registerBasics}中获取到注册项：{string.Join(',', basicsList)}");
+                cache.AddRange(registerBasics.getAdditionalRegister());
+                cacheTag.AddRange(registerBasics.getAdditionalTag());
+
+                if (cache.Count > 0) {
+                    needRegisterList.AddRange(cache);
+                    log.Info($"从{registerBasics}中获取到注册项：{string.Join(',', cache)}");
+                    cache.Clear();
+                }
+                if (cacheTag.Count > 0) {
+                    needRegisterTag.AddRange(cacheTag);
                 }
             }
             log?.Info("完成进行统一注册");
@@ -683,15 +689,15 @@ namespace RegisterSystem {
             return null;
         }
 
-        public RegisterManage? getRegisterManageOfVoluntarilyAssignment(FieldInfo fieldInfo, VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute) {
+        public RegisterManage? getRegisterManageOfVoluntarilyAssignment(MemberInfo memberInfo, VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute) {
             VoluntarilyAssignmentType voluntarilyAssignmentType =
                 voluntarilyAssignmentAttribute?.voluntarilyAssignmentType ?? VoluntarilyAssignmentType.voluntarilyRegisterAttribute;
             switch (voluntarilyAssignmentType) {
                 case VoluntarilyAssignmentType.voluntarilyRegisterAttribute:
                 case VoluntarilyAssignmentType.registerManage:
-                    Type registerManageType = voluntarilyAssignmentAttribute?.appointType ?? fieldInfo.FieldType;
+                    Type registerManageType = voluntarilyAssignmentAttribute?.appointType ?? (memberInfo as FieldInfo)?.FieldType ?? (memberInfo as PropertyInfo)?.PropertyType;
                     RegisterManage? registerManage;
-                    if (registerManageType.IsGenericType) {
+                    if (registerManageType!.IsGenericType) {
                         Type registerBasicsType = registerManageType.GenericTypeArguments[0];
                         registerManage = getRegisterManageOfRegisterType(registerBasicsType);
                     }
@@ -724,12 +730,12 @@ namespace RegisterSystem {
             return null;
         }
 
-        public RegisterBasics? getRegisterBasicsOfVoluntarilyAssignment(FieldInfo fieldInfo, VoluntarilyAssignmentAttribute voluntarilyAssignmentAttribute) {
+        public RegisterBasics? getRegisterBasicsOfVoluntarilyAssignment(MemberInfo memberInfo, VoluntarilyAssignmentAttribute voluntarilyAssignmentAttribute) {
             switch (voluntarilyAssignmentAttribute.voluntarilyAssignmentType) {
                 case VoluntarilyAssignmentType.voluntarilyRegisterAttribute:
-                    return getRegisterBasicsOfVoluntarilyRegister(voluntarilyAssignmentAttribute.appointType ?? fieldInfo.FieldType);
+                    return getRegisterBasicsOfVoluntarilyRegister(voluntarilyAssignmentAttribute.appointType ?? (memberInfo as FieldInfo)?.FieldType ?? (memberInfo as PropertyInfo)?.PropertyType);
                 case VoluntarilyAssignmentType.registerManage:
-                    RegisterManage? registerManage = getRegisterManageOfManageType(voluntarilyAssignmentAttribute.appointType ?? fieldInfo.FieldType);
+                    RegisterManage? registerManage = getRegisterManageOfManageType(voluntarilyAssignmentAttribute.appointType ?? (memberInfo as FieldInfo)?.FieldType ?? (memberInfo as PropertyInfo)?.PropertyType);
                     if (registerManage is null) {
                         return null;
                     }
@@ -752,14 +758,24 @@ namespace RegisterSystem {
                     continue;
                 }
                 VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute = fieldInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>();
-                if (!(voluntarilyAssignmentAttribute?.use ?? true)) {
-                    continue;
-                }
                 if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType) && voluntarilyAssignmentAttribute is not null) {
                     fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterBasicsOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
                 }
                 if (typeof(RegisterManage).IsAssignableFrom(fieldInfo.FieldType)) {
                     fieldInfo.SetValue(fieldInfo.IsStatic ? null : obj, getRegisterManageOfVoluntarilyAssignment(fieldInfo, voluntarilyAssignmentAttribute));
+                }
+            }
+
+            foreach (var propertyInfo in (obj as Type ?? obj.GetType()).GetProperties(bindingFlags)) {
+                if (!Util.isEffective(propertyInfo)) {
+                    continue;
+                }
+                VoluntarilyAssignmentAttribute? voluntarilyAssignmentAttribute = propertyInfo.GetCustomAttribute<VoluntarilyAssignmentAttribute>();
+                if (typeof(RegisterBasics).IsAssignableFrom(propertyInfo.PropertyType) && voluntarilyAssignmentAttribute is not null) {
+                    propertyInfo.SetValue((propertyInfo.GetMethod ?? propertyInfo.SetMethod).IsStatic ? null : obj, getRegisterBasicsOfVoluntarilyAssignment(propertyInfo, voluntarilyAssignmentAttribute));
+                }
+                if (typeof(RegisterManage).IsAssignableFrom(propertyInfo.PropertyType)) {
+                    propertyInfo.SetValue((propertyInfo.GetMethod ?? propertyInfo.SetMethod).IsStatic ? null : obj, getRegisterManageOfVoluntarilyAssignment(propertyInfo, voluntarilyAssignmentAttribute));
                 }
             }
         }

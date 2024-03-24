@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-
 namespace RegisterSystem {
     /// <summary>
     /// 类型管理
@@ -29,7 +28,7 @@ namespace RegisterSystem {
         /// <summary>
         /// 完整的名称
         /// </summary>
-        public string completeName => basicsRegisterManage == null ? name : $"{basicsRegisterManage.completeName}/{name}";
+        public string completeName => _basicsRegisterManage == null ? name : $"{_basicsRegisterManage.completeName}/{name}";
 
         /// <summary>
         /// 对应的注册管理系统
@@ -46,7 +45,7 @@ namespace RegisterSystem {
         /// 作为基础的类管理类型
         /// 由<see cref="RegisterSystem"/>进行赋值
         /// </summary>
-        [VoluntarilyAssignment(use = false)] protected internal RegisterManage? basicsRegisterManage;
+        [IgnoreRegister] protected internal RegisterManage? _basicsRegisterManage;
 
         /// <summary>
         /// 最早的初始化方法
@@ -128,7 +127,7 @@ namespace RegisterSystem {
 
         public RegisterSystem getRegisterSystem() => registerSystem;
 
-        public RegisterManage? getBasicsRegisterManage() => basicsRegisterManage;
+        public RegisterManage? getBasicsRegisterManage() => _basicsRegisterManage;
 
         protected bool isInit() {
             if (_initEnd) {
@@ -194,8 +193,8 @@ namespace RegisterSystem {
             if (!_initEnd) {
                 return null;
             }
-            if (basicsRegisterManage is not null) {
-                return (T)basicsRegisterManage.getAt_erase(index);
+            if (_basicsRegisterManage is not null) {
+                return (T)_basicsRegisterManage.getAt_erase(index);
             }
             if (index >= 0 && index < _registerList.Count) {
                 return _registerList[index];
@@ -204,10 +203,10 @@ namespace RegisterSystem {
         }
 
         public override void put(RegisterBasics register, bool fromSon) {
-            if (basicsRegisterManage is null) {
+            if (_basicsRegisterManage is null) {
                 register._index = getCount();
             }
-            basicsRegisterManage?.put(register, true);
+            _basicsRegisterManage?.put(register, true);
             _map.Add(register.name, (T)register);
             _registerList.Add((T)register);
             _registerManageTag.addRegisterItem((T)register);

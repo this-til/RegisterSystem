@@ -12,6 +12,9 @@ namespace RegisterSystem {
             if (type.GetCustomAttribute<ObsoleteAttribute>() is not null) {
                 return false;
             }
+            if (type.GetCustomAttribute<IgnoreRegisterAttribute>() is not null) {
+                return false;
+            }
             return true;
         }
 

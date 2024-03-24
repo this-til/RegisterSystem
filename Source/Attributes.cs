@@ -45,8 +45,6 @@ namespace RegisterSystem {
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class VoluntarilyAssignmentAttribute : Attribute {
-        public bool use = true;
-
         /// <summary>
         /// 使用指定类型寻找
         /// </summary>
@@ -63,7 +61,7 @@ namespace RegisterSystem {
     /// <summary>
     /// 忽略注册字段
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class)]
     public class IgnoreRegisterAttribute : Attribute {
     }
 }

@@ -136,9 +136,38 @@ namespace RegisterSystem {
 
                 registerBasics.name = $"{name}${_name}";
                 registerBasics.priority = fieldRegisterAttribute.priority;
-                registerBasics.registerManage = fieldRegisterAttribute.registerManageType is not null ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType) : registerSystem.getRegisterManageOfRegisterType(registerBasics.GetType());
+                registerBasics.registerManage = fieldRegisterAttribute.registerManageType is not null
+                    ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType)
+                    : registerSystem.getRegisterManageOfRegisterType(registerBasics.GetType());
 
                 yield return registerBasics;
+            }
+        }
+
+        public virtual IEnumerable<Tag> getAdditionalTag() {
+            foreach (var fieldInfo in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!Util.isEffective(fieldInfo)) {
+                    continue;
+                }
+                FieldRegisterAttribute? fieldRegisterAttribute = fieldInfo.GetCustomAttribute<FieldRegisterAttribute>();
+                if (fieldRegisterAttribute is null) {
+                    continue;
+                }
+                if (!typeof(Tag).IsAssignableFrom(fieldInfo.FieldType)) {
+                    continue;
+                }
+                Tag? tag = fieldInfo.GetValue(this) as Tag;
+
+                if (tag is null) {
+                    continue;
+                }
+
+                tag.name = $"{name}${_name}";
+                tag.registerManage = fieldRegisterAttribute.registerManageType is not null 
+                    ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType) 
+                    : registerSystem.getRegisterManageOfRegisterType(tag.getRegisterBasicsType());
+
+                yield return tag;
             }
         }
 

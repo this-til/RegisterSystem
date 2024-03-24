@@ -53,8 +53,8 @@ namespace RegisterSystem {
         public abstract Type getRegisterBasicsType();
     }
 
-    public class Tag<R> : Tag where R : RegisterBasics {
-        protected HashSet<R> _has = new HashSet<R>();
+    public sealed class Tag<R> : Tag where R : RegisterBasics {
+        private HashSet<R> _has = new HashSet<R>();
 
         public override void addRegisterItem(RegisterBasics registerBasics) => _has.Add((R)registerBasics);
 
