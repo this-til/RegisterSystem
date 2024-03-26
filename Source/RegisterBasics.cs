@@ -83,14 +83,20 @@ namespace RegisterSystem {
                 if (fieldRegisterAttribute is null) {
                     continue;
                 }
-                if (!typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
-                    continue;
-                }
-                RegisterBasics? registerBasics = fieldInfo.GetValue(this) as RegisterBasics;
+                if (typeof(RegisterBasics).IsAssignableFrom(fieldInfo.FieldType)) {
+                    RegisterBasics? registerBasics = fieldInfo.GetValue(this) as RegisterBasics;
 
-                if (registerBasics is null) {
-                    registerBasics = Activator.CreateInstance(fieldInfo.FieldType) as RegisterBasics ?? throw new Exception();
-                    fieldInfo.SetValue(this, registerBasics);
+                    if (registerBasics is null) {
+                        registerBasics = Activator.CreateInstance(fieldInfo.FieldType) as RegisterBasics ?? throw new Exception();
+                        fieldInfo.SetValue(this, registerBasics);
+                    }
+                }
+                if (typeof(Tag).IsAssignableFrom(fieldInfo.FieldType)) {
+                    Tag tag = fieldInfo.GetValue(this) as Tag;
+                    if (tag == null) {
+                        tag = Activator.CreateInstance(fieldInfo.FieldType) as Tag;
+                        fieldInfo.SetValue(this, tag);
+                    }
                 }
             }
         }
@@ -133,8 +139,7 @@ namespace RegisterSystem {
                 if (registerBasics is null) {
                     continue;
                 }
-
-                registerBasics.name = $"{name}${_name}";
+                registerBasics.name = $"{name}${fieldInfo.Name}";
                 registerBasics.priority = fieldRegisterAttribute.priority;
                 registerBasics.registerManage = fieldRegisterAttribute.registerManageType is not null
                     ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType)
@@ -162,9 +167,9 @@ namespace RegisterSystem {
                     continue;
                 }
 
-                tag.name = $"{name}${_name}";
-                tag.registerManage = fieldRegisterAttribute.registerManageType is not null 
-                    ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType) 
+                tag.name = $"{name}${fieldInfo.Name}";
+                tag.registerManage = fieldRegisterAttribute.registerManageType is not null
+                    ? registerSystem.getRegisterManageOfRegisterType(fieldRegisterAttribute.registerManageType)
                     : registerSystem.getRegisterManageOfRegisterType(tag.getRegisterBasicsType());
 
                 yield return tag;
