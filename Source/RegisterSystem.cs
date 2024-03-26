@@ -237,7 +237,7 @@ namespace RegisterSystem {
                     log?.Info($"完成{type}的实例化");
                 }
                 catch (Exception e) {
-                    log?.Error($"{type}的实例化出现错误", e);
+                    log?.Error($"{type}的实例化出现错误，我们将移除它", e);
                     classRegisterManageMap.Remove(type);
                 }
             }
@@ -367,8 +367,14 @@ namespace RegisterSystem {
                             return;
                         }
 
+                        RegisterManage registerManage = getRegisterManageOfRegisterType(tag.getRegisterBasicsType());
+                        if (registerManage is null) {
+                            log?.Error($"没有找到{tag.getRegisterBasicsType()}对应的RegisterManage");
+                            return;
+                        }
+
                         tag.name = memberInfo.Name;
-                        tag.registerManage = keyValuePair.Value;
+                        tag.registerManage = registerManage;
 
                         switch (memberInfo) {
                             case PropertyInfo propertyInfo:
@@ -616,6 +622,9 @@ namespace RegisterSystem {
 
             if (needRegisterList.Count > 0) {
                 unifyRegister(needRegisterList);
+            }
+            if (needRegisterTag.Count > 0) {
+                unifyTag(needRegisterTag);
             }
         }
 
